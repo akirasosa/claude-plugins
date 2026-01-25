@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  echo "Usage: $(basename "$0") [--plan] <branch> [prompt]"
+  echo ""
+  echo "Create a git worktree and start Claude Code in a new tmux window."
+  echo ""
+  echo "Options:"
+  echo "  --plan    Start Claude Code in plan mode"
+  echo ""
+  echo "Arguments:"
+  echo "  branch    Branch name (e.g., feat/add-feature, fix/bug-fix)"
+  echo "  prompt    Optional initial prompt for Claude Code"
+  echo ""
+  echo "Examples:"
+  echo "  $(basename "$0") feat/add-metrics"
+  echo "  $(basename "$0") fix/bug \"Fix the login validation bug\""
+  echo "  $(basename "$0") --plan feat/new-feature \"Implement X\""
+  exit 1
+}
+
+# Parse options
+plan_mode=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --plan)
+      plan_mode="--permission-mode plan"
+      shift
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      usage
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+[[ $# -lt 1 ]] && usage
+
+branch="$1"
+prompt="${2:-}"
+
+# Check if running inside a tmux session (before creating worktree)
+if [[ -z "${TMUX:-}" ]]; then
+  echo "Error: Must be run inside a tmux session" >&2
+  exit 1
+fi
+
+# Create worktree
+if ! git gtr new "$branch"; then
+  echo "Error: Failed to create worktree for branch '$branch'" >&2
+  exit 1
+fi
+
+worktree_path="$(git gtr go "$branch")"
+if [[ -z "$worktree_path" || ! -d "$worktree_path" ]]; then
+  echo "Error: Failed to get worktree path" >&2
+  exit 1
+fi
+
+# Configure Claude Code settings (skip trust dialog)
+if [[ -f ~/.claude.json ]]; then
+  # Get MCP server names from .mcp.json
+  mcp_servers="[]"
+  if [[ -f .mcp.json ]]; then
+    mcp_servers=$(jq -c '.mcpServers | keys' .mcp.json 2>/dev/null || echo "[]")
+  fi
+
+  jq --arg child "$worktree_path" --argjson servers "$mcp_servers" '
+    .projects[$child].hasTrustDialogAccepted = true |
+    .projects[$child].enabledMcpjsonServers = $servers
+  ' ~/.claude.json > ~/.claude.json.tmp && mv ~/.claude.json.tmp ~/.claude.json
+fi
+
+# Window name (remove branch prefix like feat/, fix/, etc.)
+window_name="${branch##*/}"
+
+# Create new tmux window (capture window ID)
+window_id=$(tmux new-window -n "$window_name" -c "$worktree_path" -P -F "#{window_id}")
+
+# Wait for shell initialization before sending commands
+sleep 0.5
+
+if [[ -n "$prompt" ]]; then
+  # Use base64 encoding to safely transfer prompts with newlines or special characters
+  # macOS base64 adds line breaks every 76 chars, so remove them with tr -d '\n'
+  encoded=$(printf '%s' "$prompt" | base64 | tr -d '\n')
+  tmux send-keys -t "$window_id" "claude $plan_mode \"\$(echo '$encoded' | base64 -d)\"" Enter
+else
+  tmux send-keys -t "$window_id" "claude $plan_mode" Enter
+fi
+
+echo "Started Claude Code in worktree: $worktree_path"
