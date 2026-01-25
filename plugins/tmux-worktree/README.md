@@ -56,6 +56,25 @@ $PLUGIN_PATH/scripts/start --plan feat/new-feature "Implement new feature"
 3. Work on multiple features in parallel across different tmux windows
 4. When done, use `git gtr rm <branch>` to clean up (tmux windows are auto-killed)
 
+## Tips
+
+Creating a `CLAUDE.local.md` file in your repository root can help streamline handoff prompts when delegating tasks to worktrees:
+
+```markdown
+Hand off your work to Claude Code on a separate worktree using tmux-worktree as soon as the task theme is identified. Generally, ensure that Claude Code is always running in plan mode.
+
+## Handoff Prompt Requirements
+
+Include the following in your handoff prompt:
+
+1. **Objective**: What needs to be accomplished
+2. **Context**: Why this task is needed
+3. **Findings**: What has been discovered so far
+4. **Relevant files**: Files to modify or reference
+5. **Decisions made**: What has already been decided
+6. **Expected output**: Deliverable format (PR, docs, etc.)
+```
+
 ## Uninstalling
 
 ```bash
