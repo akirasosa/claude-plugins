@@ -1,0 +1,11 @@
+{
+  "name": "akirasosa-claude-plugins",
+  "description": "A collection of plugins for Claude Code",
+  "plugins": [
+    {
+      "name": "tmux-worktree",
+      "path": "plugins/tmux-worktree",
+      "description": "Git worktree workflow with tmux integration for parallel Claude Code sessions"
+    }
+  ]
+}
