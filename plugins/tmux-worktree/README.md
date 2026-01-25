@@ -25,7 +25,7 @@ claude plugin install tmux-worktree --scope local
 
 ## What it does
 
-- **SessionStart hook**: Auto-configures `.gtrconfig` with `preRemove` hook for tmux cleanup
+- **SessionStart hook**: Auto-configures `gtr.hook.preRemove` via `git config --local` for tmux cleanup
 - **Skill**: Provides worktree workflow knowledge to Claude
 
 ## Scripts
