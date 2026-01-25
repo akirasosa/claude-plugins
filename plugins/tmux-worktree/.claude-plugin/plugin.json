@@ -5,8 +5,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "type": "command",
-        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-gtrconfig.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-gtrconfig.sh"
+          }
+        ]
       }
     ]
   }
