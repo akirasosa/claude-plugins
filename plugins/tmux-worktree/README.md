@@ -17,10 +17,10 @@ This plugin enables a powerful workflow for running multiple Claude Code session
 
 ```bash
 # Install plugin from local path
-claude plugin install /path/to/tmux-worktree --scope local
+claude plugin install /path/to/tmux-worktree
 
 # Or if published to a marketplace
-claude plugin install tmux-worktree --scope local
+claude plugin install tmux-worktree
 ```
 
 ## What it does
@@ -78,5 +78,5 @@ Include the following in your handoff prompt:
 ## Uninstalling
 
 ```bash
-claude plugin uninstall tmux-worktree --scope local
+claude plugin uninstall tmux-worktree
 ```

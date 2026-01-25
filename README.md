@@ -13,7 +13,7 @@ claude plugin marketplace add https://github.com/akirasosa/claude-plugins
 ### Install Plugins
 
 ```bash
-claude plugin install <plugin-name> --scope local
+claude plugin install <plugin-name>
 ```
 
 See each plugin's README for detailed usage.
@@ -28,7 +28,7 @@ See each plugin's README for detailed usage.
 
 ```bash
 # Remove a plugin
-claude plugin uninstall <plugin-name> --scope local
+claude plugin uninstall <plugin-name>
 
 # Remove marketplace
 claude plugin marketplace remove akirasosa-claude-plugins
