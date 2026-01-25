@@ -49,12 +49,6 @@ $PLUGIN_PATH/scripts/start fix/bug "Fix the login bug"
 $PLUGIN_PATH/scripts/start --plan feat/new-feature "Implement new feature"
 ```
 
-Or use directly if you know the plugin location:
-
-```bash
-~/.claude/plugins/tmux-worktree/scripts/start feat/add-feature
-```
-
 ## Workflow
 
 1. Start a tmux session in your main repository
