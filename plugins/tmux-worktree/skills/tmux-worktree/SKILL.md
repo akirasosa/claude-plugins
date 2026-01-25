@@ -20,12 +20,12 @@ Workflow stages:
 ## Start Script
 
 ```bash
-$PLUGIN_PATH/scripts/start <branch> [prompt]
+${CLAUDE_PLUGIN_ROOT}/scripts/start <branch> [prompt]
 
 # Examples
-$PLUGIN_PATH/scripts/start feat/add-metrics
-$PLUGIN_PATH/scripts/start fix/bug "Fix the login bug"
-$PLUGIN_PATH/scripts/start --plan feat/new-feature "Implement..."
+${CLAUDE_PLUGIN_ROOT}/scripts/start feat/add-metrics
+${CLAUDE_PLUGIN_ROOT}/scripts/start fix/bug "Fix the login bug"
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/new-feature "Implement..."
 ```
 
 This creates a worktree → opens a new tmux window → starts Claude Code.
