@@ -20,10 +20,11 @@ Workflow stages:
 ## Start Script
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/start <branch> [prompt]
+${CLAUDE_PLUGIN_ROOT}/scripts/start [--plan] [--from <ref>] <branch> [prompt]
 
 # Examples
 ${CLAUDE_PLUGIN_ROOT}/scripts/start feat/add-metrics
+${CLAUDE_PLUGIN_ROOT}/scripts/start --from develop feat/add-metrics
 ${CLAUDE_PLUGIN_ROOT}/scripts/start fix/bug "Fix the login bug"
 ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/new-feature "Implement..."
 ```

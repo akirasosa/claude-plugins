@@ -2,12 +2,13 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $(basename "$0") [--plan] <branch> [prompt]"
+  echo "Usage: $(basename "$0") [--plan] [--from <ref>] <branch> [prompt]"
   echo ""
   echo "Create a git worktree and start Claude Code in a new tmux window."
   echo ""
   echo "Options:"
-  echo "  --plan    Start Claude Code in plan mode"
+  echo "  --plan        Start Claude Code in plan mode"
+  echo "  --from <ref>  Base branch/ref to create worktree from"
   echo ""
   echo "Arguments:"
   echo "  branch    Branch name (e.g., feat/add-feature, fix/bug-fix)"
@@ -15,6 +16,7 @@ usage() {
   echo ""
   echo "Examples:"
   echo "  $(basename "$0") feat/add-metrics"
+  echo "  $(basename "$0") --from develop feat/add-metrics"
   echo "  $(basename "$0") fix/bug \"Fix the login validation bug\""
   echo "  $(basename "$0") --plan feat/new-feature \"Implement X\""
   exit 1
@@ -22,11 +24,16 @@ usage() {
 
 # Parse options
 plan_mode=""
+from_ref=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --plan)
       plan_mode="--permission-mode plan"
       shift
+      ;;
+    --from)
+      from_ref="$2"
+      shift 2
       ;;
     -*)
       echo "Unknown option: $1" >&2
@@ -50,7 +57,7 @@ if [[ -z "${TMUX:-}" ]]; then
 fi
 
 # Create worktree
-if ! git gtr new "$branch"; then
+if ! git gtr new "$branch" ${from_ref:+--from "$from_ref"}; then
   echo "Error: Failed to create worktree for branch '$branch'" >&2
   exit 1
 fi
