@@ -11,7 +11,7 @@ export interface Event {
   created_at: string;
   summary: string | null;
   tmux_session: string | null;
-  tmux_window: number | null;
+  tmux_window_id: string | null;
   git_branch: string | null;
 }
 
@@ -58,7 +58,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
         created_at,
         summary,
         tmux_session,
-        tmux_window,
+        tmux_window_id,
         git_branch
       FROM events e1
       WHERE created_at = (
@@ -85,14 +85,18 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
       project_name: row.tmux_session || "unknown",
       git_branch: row.git_branch || null,
       summary: row.summary || getDefaultSummary(row.event_type),
-      tmux_command:
-        row.tmux_session && row.tmux_window !== null
-          ? `tmux switch-client -t '${row.tmux_session}:${row.tmux_window}'`
-          : null,
+      tmux_command: getTmuxCommand(row),
     }));
   } finally {
     db.close();
   }
+}
+
+function getTmuxCommand(row: Event): string | null {
+  if (row.tmux_window_id) {
+    return `tmux switch-client -t '${row.tmux_window_id}'`;
+  }
+  return null;
 }
 
 function getDefaultSummary(eventType: string): string {
