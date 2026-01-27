@@ -6,7 +6,9 @@ import {
   cleanup,
   recordEvent,
   getTmuxWindowIdForSession,
+  getActiveEvents,
   type EventInput,
+  type EventResponse,
 } from "./db";
 
 const USAGE = `
@@ -18,6 +20,8 @@ Commands:
   cleanup        Delete old records based on retention policy
   event-log      Record an event (stdin: JSON with session_id, cwd)
                  Usage: echo '{"session_id":"...","cwd":"..."}' | claude-monitoring event-log <event_type> [summary]
+  sessions       List active sessions
+                 Options: --format json|table (default: json)
   init           Initialize database (run migrations)
   help           Show this help message
 `;
@@ -72,6 +76,58 @@ function getGitBranch(projectDir: string | undefined): string | null {
     }).trim();
   } catch {
     return null;
+  }
+}
+
+function formatTime(isoString: string): string {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString("ja-JP", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+function handleSessions(args: string[]): void {
+  const formatArg = args.find((arg) => arg.startsWith("--format="));
+  const formatIndex = args.indexOf("--format");
+  let format = "json";
+
+  if (formatArg) {
+    format = formatArg.split("=")[1];
+  } else if (formatIndex !== -1 && args[formatIndex + 1]) {
+    format = args[formatIndex + 1];
+  }
+
+  // Ensure migrations are run
+  try {
+    migrate();
+  } catch {
+    // Ignore migration errors
+  }
+
+  const sessions = getActiveEvents("waiting");
+
+  if (format === "table") {
+    if (sessions.length === 0) {
+      console.log("No active sessions found.");
+      return;
+    }
+    console.log(
+      "| Project | Status | Time | Branch | Summary | Jump |"
+    );
+    console.log("|---------|--------|------|--------|---------|------|");
+    for (const s of sessions) {
+      const project = s.project_name;
+      const status = s.event_type;
+      const time = formatTime(s.created_at);
+      const branch = s.git_branch || "-";
+      const summary = s.summary.length > 30 ? s.summary.slice(0, 27) + "..." : s.summary;
+      const jump = s.tmux_command ? `\`${s.tmux_command}\`` : "-";
+      console.log(`| ${project} | ${status} | ${time} | ${branch} | ${summary} | ${jump} |`);
+    }
+  } else {
+    console.log(JSON.stringify(sessions, null, 2));
   }
 }
 
@@ -145,6 +201,10 @@ async function main(): Promise<void> {
 
     case "event-log":
       await handleEventLog(args.slice(1));
+      break;
+
+    case "sessions":
+      handleSessions(args.slice(1));
       break;
 
     case "init":
