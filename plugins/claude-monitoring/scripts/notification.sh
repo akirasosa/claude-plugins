@@ -111,7 +111,7 @@ generate_summary() {
         transcript_tail=$(tail -c 5000 "$transcript_path" 2>/dev/null)
 
         if [[ -n "$transcript_tail" ]]; then
-            local prompt="The following is the end of Claude Code's transcript (conversation history). Summarize what was completed concisely in 15 words or less. Output only the summary without any decorations or explanations.
+            local prompt="The following is the end of Claude Code's transcript (conversation history). Summarize what was completed concisely in 15 words or less. Respond in English. Output only the summary without any decorations or explanations.
 
 $transcript_tail"
 
