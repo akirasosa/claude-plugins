@@ -23,7 +23,7 @@ INPUT=$(timeout 5 cat 2>/dev/null || echo "{}")
 
 # Extract fields from JSON
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null)
-PROJECT_DIR=$(echo "$INPUT" | jq -r '.project_directory // ""' 2>/dev/null)
+PROJECT_DIR=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null)
 
 # Generate event_id (UUID-like)
 EVENT_ID=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "$(date +%s)-$$-$RANDOM")

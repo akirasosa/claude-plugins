@@ -70,6 +70,11 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
         SELECT 1 FROM events e3
         WHERE e3.session_id = e1.session_id
         AND e3.event_type = 'SessionEnd'
+        AND e3.created_at > (
+          SELECT COALESCE(MAX(created_at), '') FROM events e4
+          WHERE e4.session_id = e1.session_id
+          AND e4.event_type = 'SessionStart'
+        )
       )
       ORDER BY created_at DESC
     `;
