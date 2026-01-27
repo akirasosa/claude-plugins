@@ -60,7 +60,12 @@ export function getActiveEvents(): EventResponse[] {
         SELECT MAX(created_at) FROM events e2
         WHERE e2.session_id = e1.session_id
       )
-      AND event_type <> 'SessionEnd'
+      AND event_type IN ('Stop', 'Notification')
+      AND NOT EXISTS (
+        SELECT 1 FROM events e3
+        WHERE e3.session_id = e1.session_id
+        AND e3.event_type = 'SessionEnd'
+      )
       ORDER BY created_at DESC
     `;
 
