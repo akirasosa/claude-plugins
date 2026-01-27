@@ -160,7 +160,13 @@ async function renderEvents(events) {
       ({ event, isRead }) => `
     <tr class="${isRead ? "read" : ""}" data-event-id="${event.event_id}">
       <td class="col-project">
-        <span class="project-name">${escapeHtml(event.project_name)}</span>${event.git_branch ? `<span class="git-branch">(${escapeHtml(event.git_branch)})</span>` : ""}
+        <div class="project-info">
+          <span class="project-name">${escapeHtml(event.project_name)}</span>${event.git_branch ? `<span class="git-branch">(${escapeHtml(event.git_branch)})</span>` : ""}
+        </div>
+        <div class="session-info">
+          ${event.tmux_window_id ? `<span class="tmux-id">${escapeHtml(event.tmux_window_id)}</span>` : ""}
+          <span class="session-id">${escapeHtml(event.session_id.substring(0, 8))}</span>
+        </div>
       </td>
       <td class="col-status">
         <span class="status-badge ${event.event_type}">${event.event_type}</span>
