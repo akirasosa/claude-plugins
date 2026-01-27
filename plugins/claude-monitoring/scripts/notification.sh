@@ -16,9 +16,9 @@ show_notification() {
     local title="$1"
     local message="$2"
     if [[ "$(uname)" == "Darwin" ]]; then
-        osascript -e "display notification \"$message\" with title \"$title\"" &
+        osascript -e "display notification \"$message\" with title \"$title\"" >/dev/null 2>&1 || true
     elif command -v notify-send &>/dev/null; then
-        notify-send "$title" "$message" &
+        notify-send "$title" "$message" >/dev/null 2>&1 || true
     fi
 }
 
@@ -27,7 +27,7 @@ log_to_db() {
     local summary="$2"
     local plugin_root="$SCRIPT_DIR/.."
 
-    echo "$INPUT" | bun run "$plugin_root/src/cli.ts" event-log "$event_type" "$summary" 2>/dev/null &
+    echo "$INPUT" | bun run "$plugin_root/src/cli.ts" event-log "$event_type" "$summary" 2>/dev/null
 }
 
 # Get GCP project ID for Gemini API
@@ -48,7 +48,7 @@ get_gcp_project() {
         fi
     fi
     # 3. gcloud default project
-    gcloud config get-value project 2>/dev/null
+    timeout 3 gcloud config get-value project 2>/dev/null || true
 }
 
 # Get GCP location for Gemini API
@@ -119,7 +119,7 @@ $transcript_tail"
             escaped_prompt=$(echo "$prompt" | jq -Rs .)
 
             local access_token
-            access_token=$(gcloud auth print-access-token 2>/dev/null)
+            access_token=$(timeout 5 gcloud auth print-access-token 2>/dev/null)
 
             timeout 10 curl -s "$api_url" \
                 -H "Authorization: Bearer ${access_token}" \
@@ -145,7 +145,8 @@ case "$EVENT_TYPE" in
                     show_notification "Claude Code" "[Stop] Task completed"
                 fi
             fi
-        ) &
+        ) </dev/null >/dev/null 2>&1 &
+        disown 2>/dev/null || true
         ;;
     notification)
         (
@@ -157,16 +158,23 @@ case "$EVENT_TYPE" in
                 show_notification "Claude Code" "[Notification] Waiting for input"
                 log_to_db "Notification" "Waiting for input"
             fi
-        ) &
+        ) </dev/null >/dev/null 2>&1 &
+        disown 2>/dev/null || true
         ;;
     sessionend)
         # Log session end with reason (no notification)
-        REASON=$(echo "$INPUT" | jq -r '.reason // "unknown"' 2>/dev/null)
-        log_to_db "SessionEnd" "reason=$REASON"
+        (
+            REASON=$(echo "$INPUT" | jq -r '.reason // "unknown"' 2>/dev/null)
+            log_to_db "SessionEnd" "reason=$REASON"
+        ) </dev/null >/dev/null 2>&1 &
+        disown 2>/dev/null || true
         ;;
     sessionstart)
         # Log session start (no notification)
-        log_to_db "SessionStart" "Session started"
+        (
+            log_to_db "SessionStart" "Session started"
+        ) </dev/null >/dev/null 2>&1 &
+        disown 2>/dev/null || true
         ;;
 esac
 
