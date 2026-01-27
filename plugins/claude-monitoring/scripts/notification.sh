@@ -132,28 +132,32 @@ $transcript_tail"
 
 case "$EVENT_TYPE" in
     stop)
-        SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
-        SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
-        log_to_db "Stop" "${SUMMARY:-Task completed}"  # Always log to DB
+        (
+            SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
+            SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
+            log_to_db "Stop" "${SUMMARY:-Task completed}"  # Always log to DB
 
-        # Only show notification if not a consecutive Stop
-        if should_notify_stop "$SESSION_ID"; then
-            if [[ -n "$SUMMARY" ]]; then
-                show_notification "Claude Code" "[Stop] $SUMMARY"
-            else
-                show_notification "Claude Code" "[Stop] Task completed"
+            # Only show notification if not a consecutive Stop
+            if should_notify_stop "$SESSION_ID"; then
+                if [[ -n "$SUMMARY" ]]; then
+                    show_notification "Claude Code" "[Stop] $SUMMARY"
+                else
+                    show_notification "Claude Code" "[Stop] Task completed"
+                fi
             fi
-        fi
+        ) &
         ;;
     notification)
-        SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
-        if [[ -n "$SUMMARY" ]]; then
-            show_notification "Claude Code" "[Notification] $SUMMARY"
-            log_to_db "Notification" "$SUMMARY"
-        else
-            show_notification "Claude Code" "[Notification] Waiting for input"
-            log_to_db "Notification" "Waiting for input"
-        fi
+        (
+            SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
+            if [[ -n "$SUMMARY" ]]; then
+                show_notification "Claude Code" "[Notification] $SUMMARY"
+                log_to_db "Notification" "$SUMMARY"
+            else
+                show_notification "Claude Code" "[Notification] Waiting for input"
+                log_to_db "Notification" "Waiting for input"
+            fi
+        ) &
         ;;
     sessionend)
         # Log session end with reason (no notification)
