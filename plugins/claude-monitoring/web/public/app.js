@@ -113,12 +113,12 @@ async function endSession(sessionId) {
 }
 
 // Clipboard
-async function copyToClipboard(text) {
+async function copyToClipboard(text, label = "text") {
   try {
     await navigator.clipboard.writeText(text);
-    showToast("Copied to clipboard!");
+    showToast(`Copied ${label} to clipboard!`);
   } catch (err) {
-    showToast("Failed to copy", "error");
+    showToast(`Failed to copy ${label}`, "error");
   }
 }
 
@@ -214,7 +214,7 @@ async function renderEvents(events) {
     btn.addEventListener("click", async (e) => {
       const button = e.target.closest(".copy-btn");
       const command = button.dataset.command;
-      await copyToClipboard(command);
+      await copyToClipboard(command, "tmux command");
 
       // Mark as copied
       const row = button.closest("tr");
