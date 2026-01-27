@@ -1,6 +1,6 @@
 {
   "name": "claude-monitoring",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Claude Code event monitoring with desktop notifications and DB logging",
   "hooks": {
     "Notification": [

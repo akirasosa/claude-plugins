@@ -6,6 +6,7 @@ import {
   getDbPath,
   dbExists,
   endSession,
+  migrate,
   type FilterMode,
 } from "../src/db";
 
@@ -177,6 +178,13 @@ async function handleRequest(req: Request): Promise<Response> {
 
 // Main startup
 async function main() {
+  // Initialize database and run migrations
+  try {
+    migrate();
+  } catch {
+    // Ignore migration errors during startup
+  }
+
   // Check if our server is already running on the target port
   if (await isOurServerRunning(PORT)) {
     console.log(`Claude Monitoring Web UI already running at http://localhost:${PORT}`);

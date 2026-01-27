@@ -10,6 +10,11 @@ import {
   type EventInput,
   type EventResponse,
 } from "./db";
+import {
+  handleEvent,
+  type EventType,
+  type NotificationInput,
+} from "./notification";
 
 const USAGE = `
 Usage: claude-monitoring <command> [args]
@@ -20,6 +25,8 @@ Commands:
   cleanup        Delete old records based on retention policy
   event-log      Record an event (stdin: JSON with session_id, cwd)
                  Usage: echo '{"session_id":"...","cwd":"..."}' | claude-monitoring event-log <event_type> [summary]
+  notification   Handle Claude Code hook events (stop, notification, sessionstart, sessionend)
+                 Usage: echo '{"session_id":"...","cwd":"...","transcript_path":"..."}' | claude-monitoring notification <event_type>
   sessions       List active sessions
                  Options: --format json|table (default: json)
   init           Initialize database (run migrations)
@@ -210,6 +217,59 @@ async function handleEventLog(args: string[]): Promise<void> {
   });
 }
 
+async function handleNotificationCommand(args: string[]): Promise<void> {
+  const eventType = (args[0] || "notification") as EventType;
+
+  const inputJson = await readStdin();
+  let input: NotificationInput;
+  try {
+    input = JSON.parse(inputJson);
+  } catch {
+    input = {};
+  }
+
+  // Ensure migrations are run
+  try {
+    migrate();
+  } catch {
+    // Ignore migration errors during event handling
+  }
+
+  // Create a logToDb function that uses recordEvent
+  const logToDb = (evtType: string, summary: string): void => {
+    // Determine tmux window ID
+    let tmuxWindowId: string | null = null;
+    if (process.env.TMUX) {
+      if (evtType === "SessionStart") {
+        tmuxWindowId = getTmuxWindowId();
+      } else if (input.session_id) {
+        tmuxWindowId = getTmuxWindowIdForSession(input.session_id);
+        if (!tmuxWindowId) {
+          tmuxWindowId = getTmuxWindowId();
+        }
+      }
+    }
+
+    // Get git branch and project name
+    const gitBranch = getGitBranch(input.cwd);
+    const projectName = getProjectName(input.cwd);
+
+    recordEvent({
+      eventType: evtType,
+      summary,
+      input: {
+        session_id: input.session_id,
+        cwd: input.cwd,
+      },
+      tmuxWindowId,
+      gitBranch,
+      projectName,
+    });
+  };
+
+  await handleEvent(eventType, input, logToDb);
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -233,6 +293,10 @@ async function main(): Promise<void> {
 
     case "event-log":
       await handleEventLog(args.slice(1));
+      break;
+
+    case "notification":
+      await handleNotificationCommand(args.slice(1));
       break;
 
     case "sessions":

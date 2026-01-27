@@ -1,0 +1,139 @@
+import { existsSync, readFileSync } from "fs";
+import { execSync } from "child_process";
+import { getGcpProject, getGcpLocation } from "./config";
+
+const MODEL_ID = "gemini-2.5-flash";
+const MAX_SUMMARY_LENGTH = 100;
+const TRANSCRIPT_LINES = 50;
+
+interface GeminiResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+}
+
+/**
+ * Get gcloud access token for API authentication
+ */
+function getAccessToken(): string | null {
+  try {
+    return execSync("gcloud auth print-access-token", {
+      encoding: "utf-8",
+      timeout: 5000,
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read the last N lines of a transcript file
+ */
+function readTranscriptTail(transcriptPath: string): string | null {
+  if (!transcriptPath || !existsSync(transcriptPath)) {
+    return null;
+  }
+
+  try {
+    const content = readFileSync(transcriptPath, "utf-8");
+    const lines = content.split("\n");
+    return lines.slice(-TRANSCRIPT_LINES).join("\n");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Build the prompt for Gemini based on event type
+ */
+function buildPrompt(transcriptTail: string, eventType: string): string {
+  if (eventType === "notification") {
+    return `The following is the end of Claude Code's transcript (JSONL format).
+Claude is waiting for user input. Look for "AskUserQuestion" tool_use to understand what is being asked.
+Summarize what question or input Claude is waiting for in 15 words or less.
+Examples: "Asking which database to use", "Waiting for confirmation to proceed"
+IMPORTANT: Always respond in English, regardless of the conversation language.
+Output only the summary.
+
+${transcriptTail}`;
+  }
+
+  return `The following is the end of Claude Code's transcript (JSONL format).
+Summarize what was completed or accomplished in 15 words or less.
+Examples: "Fixed login bug", "Created PR for feature X", "Refactored auth module"
+IMPORTANT: Always respond in English, regardless of the conversation language.
+Output only the summary.
+
+${transcriptTail}`;
+}
+
+/**
+ * Generate a summary using the Gemini API
+ */
+export async function generateSummary(
+  transcriptPath: string,
+  eventType: string = "stop"
+): Promise<string | null> {
+  const projectId = getGcpProject();
+  if (!projectId) {
+    return null;
+  }
+
+  const transcriptTail = readTranscriptTail(transcriptPath);
+  if (!transcriptTail) {
+    return null;
+  }
+
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    return null;
+  }
+
+  const location = getGcpLocation();
+  const apiUrl = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${MODEL_ID}:generateContent`;
+
+  const prompt = buildPrompt(transcriptTail, eventType);
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: {
+          role: "user",
+          parts: { text: prompt },
+        },
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = (await response.json()) as GeminiResponse;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      return null;
+    }
+
+    // Truncate to max length
+    return text.slice(0, MAX_SUMMARY_LENGTH).trim();
+  } catch {
+    return null;
+  }
+}
