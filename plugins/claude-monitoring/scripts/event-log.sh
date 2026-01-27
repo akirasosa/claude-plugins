@@ -35,12 +35,28 @@ CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
 DATE_PART=$(date '+%Y-%m-%d')
 HOSTNAME=$(hostname -s 2>/dev/null || echo "unknown")
 
+# Escape for SQLite (double single quotes)
+escape_sql() {
+    echo "${1//\'/\'\'}"
+}
+
 # Get tmux info
 TMUX_SESSION=""
 TMUX_WINDOW_ID=""
 if [[ -n "${TMUX:-}" ]]; then
     TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-    TMUX_WINDOW_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null || echo "")
+
+    # For SessionStart, capture the current window
+    # For other events, look up from the SessionStart event of this session
+    if [[ "$EVENT_TYPE" == "SessionStart" ]]; then
+        TMUX_WINDOW_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null || echo "")
+    elif [[ -n "$SESSION_ID" ]]; then
+        TMUX_WINDOW_ID=$(sqlite3 "$DB_FILE" "SELECT tmux_window_id FROM events WHERE session_id='$(escape_sql "$SESSION_ID")' AND event_type='SessionStart' LIMIT 1" 2>/dev/null || echo "")
+        # Fallback to current window if no SessionStart found
+        if [[ -z "$TMUX_WINDOW_ID" ]]; then
+            TMUX_WINDOW_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null || echo "")
+        fi
+    fi
 fi
 
 # Get git branch
@@ -48,11 +64,6 @@ GIT_BRANCH=""
 if [[ -n "$CWD" ]]; then
     GIT_BRANCH=$(git -C "$CWD" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 fi
-
-# Escape for SQLite (double single quotes)
-escape_sql() {
-    echo "${1//\'/\'\'}"
-}
 
 # Extract only necessary fields for event_data
 EVENT_DATA=$(echo "$INPUT" | jq -c '{
