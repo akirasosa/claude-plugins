@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Claude Code notification script with DB logging
+# Usage: notification.sh <event_type>
+# event_type: notification (input wait), stop (task complete), sessionend, sessionstart
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+EVENT_TYPE="${1:-notification}"
+
+# Read JSON input from stdin (with timeout)
+INPUT=$(timeout 5 cat 2>/dev/null || echo "{}")
+TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null)
+
+show_notification() {
+    local title="$1"
+    local message="$2"
+    if [[ "$(uname)" == "Darwin" ]]; then
+        osascript -e "display notification \"$message\" with title \"$title\"" &
+    elif command -v notify-send &>/dev/null; then
+        notify-send "$title" "$message" &
+    fi
+}
+
+log_to_db() {
+    local event_type="$1"
+    local summary="$2"
+    # Pass original input JSON to event log script
+    if [[ -x "$SCRIPT_DIR/event-log.sh" ]]; then
+        echo "$INPUT" | "$SCRIPT_DIR/event-log.sh" "$event_type" "$summary" 2>/dev/null &
+    fi
+}
+
+# Get GCP project ID for Gemini API
+get_gcp_project() {
+    # 1. Environment variable
+    if [[ -n "${GEMINI_GCP_PROJECT:-}" ]]; then
+        echo "$GEMINI_GCP_PROJECT"
+        return
+    fi
+    # 2. Settings file
+    local settings_file="$HOME/.claude/claude-monitoring.local.md"
+    if [[ -f "$settings_file" ]]; then
+        local project
+        project=$(grep -E '^gcp_project:' "$settings_file" | sed 's/gcp_project: *//' | tr -d ' ')
+        if [[ -n "$project" ]]; then
+            echo "$project"
+            return
+        fi
+    fi
+    # 3. gcloud default project
+    gcloud config get-value project 2>/dev/null
+}
+
+# Get GCP location for Gemini API
+get_gcp_location() {
+    # 1. Environment variable
+    if [[ -n "${GEMINI_GCP_LOCATION:-}" ]]; then
+        echo "$GEMINI_GCP_LOCATION"
+        return
+    fi
+    # 2. Settings file
+    local settings_file="$HOME/.claude/claude-monitoring.local.md"
+    if [[ -f "$settings_file" ]]; then
+        local location
+        location=$(grep -E '^gcp_location:' "$settings_file" | sed 's/gcp_location: *//' | tr -d ' ')
+        if [[ -n "$location" ]]; then
+            echo "$location"
+            return
+        fi
+    fi
+    # 3. Default
+    echo "asia-northeast1"
+}
+
+generate_summary() {
+    local transcript_path="$1"
+    local project_id
+    project_id=$(get_gcp_project)
+
+    # Skip summary generation if no project ID available
+    if [[ -z "$project_id" ]]; then
+        return
+    fi
+
+    local location
+    location=$(get_gcp_location)
+    local model_id="gemini-2.5-flash"
+    local api_url="https://aiplatform.googleapis.com/v1/projects/${project_id}/locations/${location}/publishers/google/models/${model_id}:generateContent"
+
+    if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
+        local transcript_tail
+        transcript_tail=$(tail -c 5000 "$transcript_path" 2>/dev/null)
+
+        if [[ -n "$transcript_tail" ]]; then
+            local prompt="以下はClaude Codeのトランスクリプト（会話履歴）の末尾です。何が完了したのか、日本語で15文字以内で簡潔に要約してください。装飾や説明は不要で、要約のみを出力してください。
+
+$transcript_tail"
+
+            local escaped_prompt
+            escaped_prompt=$(echo "$prompt" | jq -Rs .)
+
+            local access_token
+            access_token=$(gcloud auth print-access-token 2>/dev/null)
+
+            timeout 10 curl -s "$api_url" \
+                -H "Authorization: Bearer ${access_token}" \
+                -H "Content-Type: application/json" \
+                -d "{\"contents\": {\"role\": \"user\", \"parts\": {\"text\": $escaped_prompt}}}" \
+                2>/dev/null | jq -r '.candidates[0].content.parts[0].text // empty' 2>/dev/null | head -c 100
+        fi
+    fi
+}
+
+case "$EVENT_TYPE" in
+    stop)
+        SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
+        if [[ -n "$SUMMARY" ]]; then
+            show_notification "Claude Code" "[Stop] $SUMMARY"
+            log_to_db "Stop" "$SUMMARY"
+        else
+            show_notification "Claude Code" "[Stop] Task completed"
+            log_to_db "Stop" "Task completed"
+        fi
+        ;;
+    notification)
+        SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
+        if [[ -n "$SUMMARY" ]]; then
+            show_notification "Claude Code" "[Notification] $SUMMARY"
+            log_to_db "Notification" "$SUMMARY"
+        else
+            show_notification "Claude Code" "[Notification] Waiting for input"
+            log_to_db "Notification" "Waiting for input"
+        fi
+        ;;
+    sessionend)
+        # Log session end with reason (no notification)
+        REASON=$(echo "$INPUT" | jq -r '.reason // "unknown"' 2>/dev/null)
+        log_to_db "SessionEnd" "reason=$REASON"
+        ;;
+    sessionstart)
+        # Log session start (no notification)
+        log_to_db "SessionStart" "Session started"
+        ;;
+esac
+
+exit 0
