@@ -25,9 +25,15 @@ show_notification() {
 log_to_db() {
     local event_type="$1"
     local summary="$2"
-    # Pass original input JSON to CLI
-    local cli="$SCRIPT_DIR/../bin/claude-monitoring"
-    echo "$INPUT" | "$cli" event-log "$event_type" "$summary" 2>/dev/null &
+    local plugin_root="$SCRIPT_DIR/.."
+    local cli="$plugin_root/bin/claude-monitoring"
+
+    # Use compiled binary if available, otherwise fall back to bun
+    if [[ -x "$cli" ]]; then
+        echo "$INPUT" | "$cli" event-log "$event_type" "$summary" 2>/dev/null &
+    else
+        echo "$INPUT" | bun run "$plugin_root/src/cli.ts" event-log "$event_type" "$summary" 2>/dev/null &
+    fi
 }
 
 # Get GCP project ID for Gemini API

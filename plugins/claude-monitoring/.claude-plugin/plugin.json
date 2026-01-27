@@ -1,8 +1,19 @@
 {
   "name": "claude-monitoring",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Claude Code event monitoring with desktop notifications and DB logging",
   "hooks": {
+    "Setup": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd ${CLAUDE_PLUGIN_ROOT} && bun run build",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "",
