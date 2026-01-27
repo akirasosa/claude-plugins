@@ -14,7 +14,7 @@ Query the Claude Code events database and show active sessions.
 1. Run the following command to get active sessions as JSON:
 
 ```bash
-bun run ~/.claude/plugins/claude-monitoring/src/cli.ts sessions --format json
+bun run ${CLAUDE_PLUGIN_ROOT}/src/cli.ts sessions --format json
 ```
 
 2. Parse the JSON output and format it as a Markdown table with the following columns:
