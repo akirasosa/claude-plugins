@@ -21,20 +21,27 @@ SELECT
   project_dir,
   summary,
   tmux_session,
-  tmux_window
+  tmux_window,
+  git_branch
 FROM events e1
 WHERE created_at = (
   SELECT MAX(created_at) FROM events e2
   WHERE e2.session_id = e1.session_id
 )
-AND event_type <> 'SessionEnd'
+AND event_type IN ('Stop', 'Notification')
+AND NOT EXISTS (
+  SELECT 1 FROM events e3
+  WHERE e3.session_id = e1.session_id
+  AND e3.event_type = 'SessionEnd'
+)
 ORDER BY created_at DESC;
 ```
 
 2. Format the output as a Markdown table with the following columns:
-   - **Project**: Extract the last directory name from `project_dir` (e.g., `/path/to/myproject` -> `myproject`)
+   - **Project**: Use `tmux_session` if available, otherwise extract the last directory name from `project_dir`
    - **Status**: The `event_type` value
    - **Time**: Format `created_at` as `HH:MM` in local time
+   - **Branch**: The `git_branch` value (show `-` if empty)
    - **Summary**: The `summary` value (truncate if too long)
    - **Jump**: If `tmux_session` and `tmux_window` exist, show: `` `tmux switch-client -t 'session:window'` ``
 
@@ -43,9 +50,8 @@ ORDER BY created_at DESC;
 ## Example Output
 
 ```
-| Project | Status | Time | Summary | Jump |
-|---------|--------|------|---------|------|
-| dotfiles | Stop | 10:30 | タスク完了 | `tmux switch-client -t 'dotfiles:1'` |
-| work | Notification | 10:25 | 入力待ち | `tmux switch-client -t 'work:2'` |
-| claude-plugins | SessionStart | 10:20 | Session started | `tmux switch-client -t 'plugins:0'` |
+| Project | Status | Time | Branch | Summary | Jump |
+|---------|--------|------|--------|---------|------|
+| dotfiles | Stop | 10:30 | main | タスク完了 | `tmux switch-client -t 'dotfiles:1'` |
+| work | Notification | 10:25 | feature/auth | 入力待ち | `tmux switch-client -t 'work:2'` |
 ```
