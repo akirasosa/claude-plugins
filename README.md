@@ -23,6 +23,7 @@ See each plugin's README for detailed usage.
 | Plugin | Description |
 |--------|-------------|
 | [tmux-worktree](./plugins/tmux-worktree/) | Git worktree workflow with tmux integration |
+| [claude-monitoring](./plugins/claude-monitoring/) | Claude Code event monitoring with desktop notifications and DB logging |
 
 ## Uninstalling
 

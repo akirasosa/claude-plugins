@@ -11,6 +11,11 @@
       "name": "tmux-worktree",
       "source": "./plugins/tmux-worktree",
       "description": "Git worktree workflow with tmux integration for parallel Claude Code sessions"
+    },
+    {
+      "name": "claude-monitoring",
+      "source": "./plugins/claude-monitoring",
+      "description": "Claude Code event monitoring with desktop notifications and DB logging"
     }
   ]
 }
