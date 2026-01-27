@@ -73,6 +73,25 @@ get_gcp_location() {
     echo "asia-northeast1"
 }
 
+# Stopイベントの連続発火を防ぐ（30秒以内の同一セッション）
+STOP_DEDUP_INTERVAL=30
+should_notify_stop() {
+    local session_id="$1"
+    local state_file="/tmp/claude-monitoring-last-stop-${session_id}"
+    local now=$(date +%s)
+
+    if [[ -f "$state_file" ]]; then
+        local last_time=$(cat "$state_file" 2>/dev/null || echo 0)
+        local diff=$((now - last_time))
+        if [[ $diff -lt $STOP_DEDUP_INTERVAL ]]; then
+            return 1  # Skip notification (consecutive Stop)
+        fi
+    fi
+
+    echo "$now" > "$state_file"
+    return 0  # Show notification
+}
+
 generate_summary() {
     local transcript_path="$1"
     local project_id
@@ -114,13 +133,17 @@ $transcript_tail"
 
 case "$EVENT_TYPE" in
     stop)
+        SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
         SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
-        if [[ -n "$SUMMARY" ]]; then
-            show_notification "Claude Code" "[Stop] $SUMMARY"
-            log_to_db "Stop" "$SUMMARY"
-        else
-            show_notification "Claude Code" "[Stop] Task completed"
-            log_to_db "Stop" "Task completed"
+        log_to_db "Stop" "${SUMMARY:-Task completed}"  # Always log to DB
+
+        # Only show notification if not a consecutive Stop
+        if should_notify_stop "$SESSION_ID"; then
+            if [[ -n "$SUMMARY" ]]; then
+                show_notification "Claude Code" "[Stop] $SUMMARY"
+            else
+                show_notification "Claude Code" "[Stop] Task completed"
+            fi
         fi
         ;;
     notification)
