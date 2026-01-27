@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Clean up old records from the events database
 # Usage: db-cleanup.sh
 

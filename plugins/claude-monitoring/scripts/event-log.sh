@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Log Claude Code events to SQLite database
 # Usage: echo '{"session_id":"..."}' | event-log.sh <event_type> [summary]
 

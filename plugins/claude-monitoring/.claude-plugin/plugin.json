@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notification.sh notification"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notification.sh notification"
           }
         ]
       }
@@ -20,7 +20,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notification.sh stop"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notification.sh stop"
           }
         ]
       }
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notification.sh sessionstart"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notification.sh sessionstart"
           }
         ]
       }
@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/notification.sh sessionend"
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notification.sh sessionend"
           }
         ]
       }

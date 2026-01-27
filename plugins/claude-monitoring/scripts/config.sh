@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Shared configuration for claude-monitoring plugin
 
 DB_DIR="$HOME/.local/share/claude-monitoring"

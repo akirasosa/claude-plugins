@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 # Claude Code notification script with DB logging
 # Usage: notification.sh <event_type>
 # event_type: notification (input wait), stop (task complete), sessionend, sessionstart
