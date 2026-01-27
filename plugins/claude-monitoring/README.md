@@ -94,26 +94,12 @@ CREATE TABLE events (
     event_type TEXT NOT NULL,
     created_at TEXT NOT NULL,
     project_dir TEXT,
-    cwd TEXT,
-    event_data TEXT,
-    tool_name TEXT,
     summary TEXT,
-    tmux_session TEXT,
     tmux_window_id TEXT,
-    hostname TEXT,
     date_part TEXT,
     git_branch TEXT
 );
 ```
-
-### event_data Fields
-
-The `event_data` column stores only essential fields to minimize database size:
-- `session_id`
-- `project_directory`
-- `cwd`
-- `tool_name`
-- `reason`
 
 ## Migration from Existing Setup
 

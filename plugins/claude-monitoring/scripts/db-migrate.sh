@@ -50,6 +50,13 @@ has_window_id_column() {
     [[ "$count" -gt 0 ]]
 }
 
+# Check if tmux_session column exists (removed in migration 004)
+has_tmux_session_column() {
+    local count
+    count=$(sqlite3 "$DB_FILE" "SELECT count(*) FROM pragma_table_info('events') WHERE name='tmux_session';" 2>/dev/null || echo "0")
+    [[ "$count" -gt 0 ]]
+}
+
 # Detect version for existing databases without user_version set
 detect_existing_version() {
     if ! table_exists; then
@@ -57,7 +64,10 @@ detect_existing_version() {
         return
     fi
 
-    if has_window_id_column; then
+    # Check if unused columns were removed (migration 004)
+    if ! has_tmux_session_column; then
+        echo "4"
+    elif has_window_id_column; then
         echo "3"
     elif has_git_branch_column; then
         echo "2"
