@@ -57,7 +57,6 @@ function buildPrompt(transcriptTail: string, eventType: string): string {
 Claude is waiting for user input. Look for "AskUserQuestion" tool_use to understand what is being asked.
 Summarize what question or input Claude is waiting for in 15 words or less.
 Examples: "Asking which database to use", "Waiting for confirmation to proceed"
-IMPORTANT: Always respond in English, regardless of the conversation language.
 Output only the summary.
 
 ${transcriptTail}`;
@@ -66,7 +65,6 @@ ${transcriptTail}`;
   return `The following is the end of Claude Code's transcript (JSONL format).
 Summarize what was completed or accomplished in 15 words or less.
 Examples: "Fixed login bug", "Created PR for feature X", "Refactored auth module"
-IMPORTANT: Always respond in English, regardless of the conversation language.
 Output only the summary.
 
 ${transcriptTail}`;

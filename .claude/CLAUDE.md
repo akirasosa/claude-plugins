@@ -9,12 +9,9 @@ Claude Code Plugin Marketplace - hosts plugins for enhancing Claude Code workflo
 ## Development Commands
 
 ### claude-monitoring plugin
-cd plugins/claude-monitoring && bun run build   # Build TypeScript
-cd plugins/claude-monitoring && bun test        # Run tests
-cd plugins/claude-monitoring/web && bun --watch run server.ts  # Dev server
-
-### CLI (direct execution)
-bun run plugins/claude-monitoring/src/cli.ts <command>
+cd plugins/claude-monitoring && bun test                        # Run tests
+cd plugins/claude-monitoring/web && bun --watch run server.ts   # Dev server
+bun run plugins/claude-monitoring/src/cli.ts <command>          # CLI execution
 
 ## Architecture
 
