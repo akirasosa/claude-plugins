@@ -3,13 +3,30 @@ import { join } from "path";
 import { getActiveEvents, getDbLastModified, getDbPath, dbExists } from "./db";
 
 const DEFAULT_PORT = 3847;
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 0;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
 const PUBLIC_DIR = join(import.meta.dir, "public");
 
 // SSE clients
 const clients: Set<ReadableStreamDefaultController> = new Set();
 let watcher: FSWatcher | null = null;
 let debounceTimer: Timer | null = null;
+
+// Check if a claude-monitoring server is already running on the port
+async function isOurServerRunning(port: number): Promise<boolean> {
+  try {
+    const response = await fetch(`http://localhost:${port}/api/events`, {
+      signal: AbortSignal.timeout(1000),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      // Check if it has our expected response structure
+      return "events" in data && "last_modified" in data;
+    }
+  } catch {
+    // Connection failed or timeout - server not running
+  }
+  return false;
+}
 
 function broadcastUpdate() {
   const data = JSON.stringify({
@@ -118,28 +135,40 @@ async function handleRequest(req: Request): Promise<Response> {
   return new Response("Not Found", { status: 404 });
 }
 
-// Try default port first, then auto-assign if in use
-let server: ReturnType<typeof Bun.serve>;
-try {
-  server = Bun.serve({
-    port: PORT || DEFAULT_PORT,
-    fetch: handleRequest,
-    idleTimeout: 255, // Max value for SSE connections
-  });
-} catch (err: unknown) {
-  if ((err as { code?: string }).code === "EADDRINUSE" && !process.env.PORT) {
-    // Port in use, let OS assign an available one
-    server = Bun.serve({
-      port: 0,
-      fetch: handleRequest,
-      idleTimeout: 255,
-    });
-  } else {
-    throw err;
+// Main startup
+async function main() {
+  // Check if our server is already running on the target port
+  if (await isOurServerRunning(PORT)) {
+    console.log(`Claude Monitoring Web UI already running at http://localhost:${PORT}`);
+    process.exit(0);
   }
+
+  // Start server
+  let server: ReturnType<typeof Bun.serve>;
+  try {
+    server = Bun.serve({
+      port: PORT,
+      fetch: handleRequest,
+      idleTimeout: 255, // Max value for SSE connections
+    });
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code === "EADDRINUSE") {
+      // Port in use by another application, try a different port
+      console.error(`Port ${PORT} is in use by another application`);
+      server = Bun.serve({
+        port: 0,
+        fetch: handleRequest,
+        idleTimeout: 255,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  console.log(`Claude Monitoring Web UI running at http://localhost:${server.port}`);
+
+  // Start watcher on startup
+  startWatcher();
 }
 
-console.log(`Claude Monitoring Web UI running at http://localhost:${server.port}`);
-
-// Start watcher on startup
-startWatcher();
+main();
