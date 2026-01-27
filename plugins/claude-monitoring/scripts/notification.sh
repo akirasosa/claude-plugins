@@ -93,6 +93,7 @@ should_notify_stop() {
 
 generate_summary() {
     local transcript_path="$1"
+    local event_type="${2:-stop}"
     local project_id
     project_id=$(get_gcp_project)
 
@@ -108,12 +109,26 @@ generate_summary() {
 
     if [[ -n "$transcript_path" && -f "$transcript_path" ]]; then
         local transcript_tail
-        transcript_tail=$(tail -c 5000 "$transcript_path" 2>/dev/null)
+        transcript_tail=$(tail -n 50 "$transcript_path" 2>/dev/null)
 
         if [[ -n "$transcript_tail" ]]; then
-            local prompt="The following is the end of Claude Code's transcript (conversation history). Summarize what was completed concisely in 15 words or less. Respond in English. Output only the summary without any decorations or explanations.
+            local prompt
+            if [[ "$event_type" == "notification" ]]; then
+                prompt="The following is the end of Claude Code's transcript (JSONL format).
+Claude is waiting for user input. Look for \"AskUserQuestion\" tool_use to understand what is being asked.
+Summarize what question or input Claude is waiting for in 15 words or less.
+Examples: \"Asking which database to use\", \"Waiting for confirmation to proceed\"
+Output only the summary.
 
 $transcript_tail"
+            else
+                prompt="The following is the end of Claude Code's transcript (JSONL format).
+Summarize what was completed or accomplished in 15 words or less.
+Examples: \"Fixed login bug\", \"Created PR for feature X\", \"Refactored auth module\"
+Output only the summary.
+
+$transcript_tail"
+            fi
 
             local escaped_prompt
             escaped_prompt=$(echo "$prompt" | jq -Rs .)
@@ -134,7 +149,7 @@ case "$EVENT_TYPE" in
     stop)
         (
             SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty' 2>/dev/null)
-            SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
+            SUMMARY=$(generate_summary "$TRANSCRIPT_PATH" "stop")
             log_to_db "Stop" "${SUMMARY:-Task completed}"  # Always log to DB
 
             # Only show notification if not a consecutive Stop
@@ -150,7 +165,7 @@ case "$EVENT_TYPE" in
         ;;
     notification)
         (
-            SUMMARY=$(generate_summary "$TRANSCRIPT_PATH")
+            SUMMARY=$(generate_summary "$TRANSCRIPT_PATH" "notification")
             if [[ -n "$SUMMARY" ]]; then
                 show_notification "Claude Code" "[Notification] $SUMMARY"
                 log_to_db "Notification" "$SUMMARY"
