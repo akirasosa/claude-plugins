@@ -1,0 +1,10 @@
+{
+  "name": "claude-monitoring",
+  "version": "1.4.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/cli.ts --compile --outfile bin/claude-monitoring",
+    "web": "bun run web/server.ts",
+    "test": "bun test"
+  }
+}

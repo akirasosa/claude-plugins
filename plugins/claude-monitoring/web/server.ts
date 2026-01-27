@@ -7,7 +7,7 @@ import {
   dbExists,
   endSession,
   type FilterMode,
-} from "./db";
+} from "../src/db";
 
 const DEFAULT_PORT = 3847;
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;

@@ -25,10 +25,9 @@ show_notification() {
 log_to_db() {
     local event_type="$1"
     local summary="$2"
-    # Pass original input JSON to event log script
-    if [[ -x "$SCRIPT_DIR/event-log.sh" ]]; then
-        echo "$INPUT" | "$SCRIPT_DIR/event-log.sh" "$event_type" "$summary" 2>/dev/null &
-    fi
+    # Pass original input JSON to CLI
+    local cli="$SCRIPT_DIR/../bin/claude-monitoring"
+    echo "$INPUT" | "$cli" event-log "$event_type" "$summary" 2>/dev/null &
 }
 
 # Get GCP project ID for Gemini API

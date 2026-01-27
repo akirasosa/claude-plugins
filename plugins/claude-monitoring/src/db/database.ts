@@ -1,43 +1,29 @@
 import { Database } from "bun:sqlite";
-import { existsSync } from "fs";
-import { homedir } from "os";
-import { join, basename } from "path";
-
-export interface Event {
-  id: number;
-  event_id: string;
-  session_id: string;
-  event_type: string;
-  created_at: string;
-  summary: string | null;
-  project_dir: string | null;
-  tmux_window_id: string | null;
-  git_branch: string | null;
-}
-
-export interface EventResponse {
-  id: number;
-  event_id: string;
-  session_id: string;
-  event_type: string;
-  created_at: string;
-  project_name: string;
-  git_branch: string | null;
-  summary: string;
-  tmux_command: string | null;
-  tmux_window_id: string | null;
-}
-
-export type FilterMode = "waiting" | "active";
-
-const DB_PATH = join(homedir(), ".local/share/claude-monitoring/events.db");
+import { existsSync, mkdirSync } from "fs";
+import { basename } from "path";
+import { DB_DIR, DB_FILE } from "./config";
+import type { Event, EventInput, EventResponse, FilterMode } from "../types";
 
 export function getDbPath(): string {
-  return DB_PATH;
+  return DB_FILE;
 }
 
 export function dbExists(): boolean {
-  return existsSync(DB_PATH);
+  return existsSync(DB_FILE);
+}
+
+export function ensureDbDir(): void {
+  if (!existsSync(DB_DIR)) {
+    mkdirSync(DB_DIR, { recursive: true });
+  }
+}
+
+export function getDb(readonly = false): Database {
+  ensureDbDir();
+  if (readonly) {
+    return new Database(DB_FILE, { readonly: true });
+  }
+  return new Database(DB_FILE);
 }
 
 export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
@@ -45,7 +31,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
     return [];
   }
 
-  const db = new Database(DB_PATH, { readonly: true });
+  const db = getDb(true);
   try {
     const eventTypeFilter =
       mode === "waiting" ? "AND event_type IN ('Stop', 'Notification')" : "";
@@ -124,7 +110,7 @@ export function getDbLastModified(): number {
     return 0;
   }
   try {
-    const stat = Bun.file(DB_PATH);
+    const stat = Bun.file(DB_FILE);
     return stat.lastModified;
   } catch {
     return 0;
@@ -136,7 +122,7 @@ export function endSession(sessionId: string): boolean {
     return false;
   }
 
-  const db = new Database(DB_PATH);
+  const db = getDb();
   try {
     const eventId = crypto.randomUUID();
     const now = new Date().toISOString();
@@ -151,6 +137,64 @@ export function endSession(sessionId: string): boolean {
   } catch (err) {
     console.error("Failed to end session:", err);
     return false;
+  } finally {
+    db.close();
+  }
+}
+
+export interface RecordEventOptions {
+  eventType: string;
+  summary: string;
+  input: EventInput;
+  tmuxWindowId?: string | null;
+  gitBranch?: string | null;
+}
+
+export function recordEvent(options: RecordEventOptions): void {
+  const { eventType, summary, input, tmuxWindowId, gitBranch } = options;
+
+  ensureDbDir();
+  const db = getDb();
+
+  try {
+    const eventId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const datePart = now.split("T")[0];
+
+    db.prepare(
+      `INSERT INTO events (
+        event_id, session_id, event_type, created_at,
+        project_dir, summary, tmux_window_id, date_part, git_branch
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      eventId,
+      input.session_id || "",
+      eventType,
+      now,
+      input.cwd || "",
+      summary,
+      tmuxWindowId || null,
+      datePart,
+      gitBranch || ""
+    );
+  } finally {
+    db.close();
+  }
+}
+
+export function getTmuxWindowIdForSession(sessionId: string): string | null {
+  if (!dbExists() || !sessionId) {
+    return null;
+  }
+
+  const db = getDb(true);
+  try {
+    const result = db
+      .query(
+        "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1"
+      )
+      .get(sessionId) as { tmux_window_id: string | null } | null;
+    return result?.tmux_window_id || null;
   } finally {
     db.close();
   }
