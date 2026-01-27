@@ -6,6 +6,7 @@ export interface Event {
   created_at: string;
   summary: string | null;
   project_dir: string | null;
+  project_name: string | null;
   tmux_window_id: string | null;
   git_branch: string | null;
 }

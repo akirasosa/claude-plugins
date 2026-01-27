@@ -45,6 +45,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
         created_at,
         summary,
         project_dir,
+        project_name,
         tmux_window_id,
         git_branch
       FROM events e1
@@ -74,7 +75,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
       session_id: row.session_id,
       event_type: row.event_type,
       created_at: row.created_at,
-      project_name: row.project_dir ? basename(row.project_dir) : "unknown",
+      project_name: row.project_name || (row.project_dir ? basename(row.project_dir) : "unknown"),
       git_branch: row.git_branch || null,
       summary: row.summary || getDefaultSummary(row.event_type),
       tmux_command: getTmuxCommand(row),
@@ -148,10 +149,11 @@ export interface RecordEventOptions {
   input: EventInput;
   tmuxWindowId?: string | null;
   gitBranch?: string | null;
+  projectName?: string | null;
 }
 
 export function recordEvent(options: RecordEventOptions): void {
-  const { eventType, summary, input, tmuxWindowId, gitBranch } = options;
+  const { eventType, summary, input, tmuxWindowId, gitBranch, projectName } = options;
 
   ensureDbDir();
   const db = getDb();
@@ -164,8 +166,8 @@ export function recordEvent(options: RecordEventOptions): void {
     db.prepare(
       `INSERT INTO events (
         event_id, session_id, event_type, created_at,
-        project_dir, summary, tmux_window_id, date_part, git_branch
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        project_dir, summary, tmux_window_id, date_part, git_branch, project_name
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       eventId,
       input.session_id || "",
@@ -175,7 +177,8 @@ export function recordEvent(options: RecordEventOptions): void {
       summary,
       tmuxWindowId || null,
       datePart,
-      gitBranch || ""
+      gitBranch || "",
+      projectName || null
     );
   } finally {
     db.close();
