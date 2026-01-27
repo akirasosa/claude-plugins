@@ -104,13 +104,6 @@ async function renderEvents(events) {
     .map(
       ({ event, isRead }) => `
     <tr class="${isRead ? "read" : ""}" data-event-id="${event.event_id}">
-      <td class="col-read">
-        <div class="checkbox-wrapper">
-          <input type="checkbox" ${isRead ? "checked" : ""}
-            data-event-id="${event.event_id}"
-            title="Mark as read">
-        </div>
-      </td>
       <td class="col-project">
         <span class="project-name">${escapeHtml(event.project_name)}</span>${event.git_branch ? `<span class="git-branch">(${escapeHtml(event.git_branch)})</span>` : ""}
       </td>
@@ -123,10 +116,16 @@ async function renderEvents(events) {
       <td class="col-summary">
         <span class="summary" title="${escapeHtml(event.summary)}">${escapeHtml(event.summary)}</span>
       </td>
-      <td class="col-jump">
+      <td class="col-copy">
         ${
           event.tmux_command
-            ? `<button class="jump-btn" data-command="${escapeHtml(event.tmux_command)}" title="${escapeHtml(event.tmux_command)}">${escapeHtml(event.tmux_command)}</button>`
+            ? `<button class="copy-btn ${isRead ? "copied" : ""}" data-command="${escapeHtml(event.tmux_command)}" title="${escapeHtml(event.tmux_command)}">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M4 1.5H3a2 2 0 00-2 2V13a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/>
+                  <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/>
+                </svg>
+                ${isRead ? '<span class="copied-text">Copied</span>' : ""}
+              </button>`
             : '<span class="no-tmux">-</span>'
         }
       </td>
@@ -135,26 +134,28 @@ async function renderEvents(events) {
     )
     .join("");
 
-  // Event listeners for checkboxes
-  tbody.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-    checkbox.addEventListener("change", async (e) => {
-      const eventId = e.target.dataset.eventId;
-      const isRead = e.target.checked;
-      await setReadStatus(eventId, isRead);
-      const row = e.target.closest("tr");
-      if (isRead) {
-        row.classList.add("read");
-      } else {
-        row.classList.remove("read");
-      }
-    });
-  });
+  // Event listeners for copy buttons
+  tbody.querySelectorAll(".copy-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const button = e.target.closest(".copy-btn");
+      const command = button.dataset.command;
+      await copyToClipboard(command);
 
-  // Event listeners for jump buttons
-  tbody.querySelectorAll(".jump-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      const command = e.target.dataset.command;
-      copyToClipboard(command);
+      // Mark as copied
+      const row = button.closest("tr");
+      const eventId = row.dataset.eventId;
+
+      if (!button.classList.contains("copied")) {
+        button.classList.add("copied");
+        // Add "Copied" text
+        const copiedText = document.createElement("span");
+        copiedText.className = "copied-text";
+        copiedText.textContent = "Copied";
+        button.appendChild(copiedText);
+
+        await setReadStatus(eventId, true);
+        row.classList.add("read");
+      }
     });
   });
 }
