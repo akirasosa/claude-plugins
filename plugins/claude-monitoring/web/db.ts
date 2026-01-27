@@ -11,7 +11,6 @@ export interface Event {
   created_at: string;
   summary: string | null;
   tmux_session: string | null;
-  tmux_window: number | null;
   tmux_window_id: string | null;
   git_branch: string | null;
 }
@@ -54,7 +53,6 @@ export function getActiveEvents(): EventResponse[] {
         created_at,
         summary,
         tmux_session,
-        tmux_window,
         tmux_window_id,
         git_branch
       FROM events e1
@@ -90,13 +88,8 @@ export function getActiveEvents(): EventResponse[] {
 }
 
 function getTmuxCommand(row: Event): string | null {
-  // Prefer window_id (stable ID that doesn't change with reordering or base-index)
   if (row.tmux_window_id) {
     return `tmux switch-client -t '${row.tmux_window_id}'`;
-  }
-  // Fallback: legacy format for existing data
-  if (row.tmux_session && row.tmux_window !== null) {
-    return `tmux switch-client -t '${row.tmux_session}:${row.tmux_window}'`;
   }
   return null;
 }

@@ -99,7 +99,6 @@ CREATE TABLE events (
     tool_name TEXT,
     summary TEXT,
     tmux_session TEXT,
-    tmux_window INTEGER,
     tmux_window_id TEXT,
     hostname TEXT,
     date_part TEXT,

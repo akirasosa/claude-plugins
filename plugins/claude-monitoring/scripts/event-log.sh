@@ -37,11 +37,9 @@ HOSTNAME=$(hostname -s 2>/dev/null || echo "unknown")
 
 # Get tmux info
 TMUX_SESSION=""
-TMUX_WINDOW=""
 TMUX_WINDOW_ID=""
 if [[ -n "${TMUX:-}" ]]; then
     TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
-    TMUX_WINDOW=$(tmux display-message -p '#I' 2>/dev/null || echo "")
     TMUX_WINDOW_ID=$(tmux display-message -p '#{window_id}' 2>/dev/null || echo "")
 fi
 
@@ -65,7 +63,7 @@ EVENT_DATA=$(echo "$INPUT" | jq -c '{
 SQL="INSERT INTO events (
     event_id, session_id, event_type, created_at,
     project_dir, cwd, event_data, tool_name,
-    summary, tmux_session, tmux_window, tmux_window_id, hostname, date_part, git_branch
+    summary, tmux_session, tmux_window_id, hostname, date_part, git_branch
 ) VALUES (
     '$(escape_sql "$EVENT_ID")',
     '$(escape_sql "$SESSION_ID")',
@@ -77,7 +75,6 @@ SQL="INSERT INTO events (
     '$(escape_sql "$TOOL_NAME")',
     '$(escape_sql "$SUMMARY")',
     '$(escape_sql "$TMUX_SESSION")',
-    $(if [[ -n "$TMUX_WINDOW" ]]; then echo "$TMUX_WINDOW"; else echo "NULL"; fi),
     $(if [[ -n "$TMUX_WINDOW_ID" ]]; then echo "'$(escape_sql "$TMUX_WINDOW_ID")'"; else echo "NULL"; fi),
     '$(escape_sql "$HOSTNAME")',
     '$(escape_sql "$DATE_PART")',
