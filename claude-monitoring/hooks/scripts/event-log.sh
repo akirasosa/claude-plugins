@@ -1,0 +1,71 @@
+#!/bin/bash
+# Log Claude Code events to SQLite database
+# Usage: echo '{"session_id":"..."}' | event-log.sh <event_type> [summary]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DB_FILE="$HOME/.local/share/claude-code/events.db"
+
+# Initialize DB if not exists
+if [[ ! -f "$DB_FILE" ]]; then
+    "$SCRIPT_DIR/db-init.sh" >/dev/null 2>&1 || true
+fi
+
+EVENT_TYPE="${1:-unknown}"
+SUMMARY="${2:-}"
+
+# Read JSON input from stdin (with timeout)
+INPUT=$(timeout 5 cat 2>/dev/null || echo "{}")
+
+# Extract fields from JSON
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // ""' 2>/dev/null)
+PROJECT_DIR=$(echo "$INPUT" | jq -r '.project_directory // ""' 2>/dev/null)
+CWD=$(echo "$INPUT" | jq -r '.cwd // ""' 2>/dev/null)
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // ""' 2>/dev/null)
+
+# Generate event_id (UUID-like)
+EVENT_ID=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "$(date +%s)-$$-$RANDOM")
+
+# Current timestamp
+CREATED_AT=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
+DATE_PART=$(date '+%Y-%m-%d')
+HOSTNAME=$(hostname -s 2>/dev/null || echo "unknown")
+
+# Get tmux info
+TMUX_SESSION=""
+TMUX_WINDOW=""
+if [[ -n "${TMUX:-}" ]]; then
+    TMUX_SESSION=$(tmux display-message -p '#S' 2>/dev/null || echo "")
+    TMUX_WINDOW=$(tmux display-message -p '#I' 2>/dev/null || echo "")
+fi
+
+# Escape for SQLite (double single quotes)
+escape_sql() {
+    echo "${1//\'/\'\'}"
+}
+
+EVENT_DATA=$(echo "$INPUT" | jq -c '.' 2>/dev/null || echo "{}")
+
+# Build SQL with proper escaping
+SQL="INSERT INTO events (
+    event_id, session_id, event_type, created_at,
+    project_dir, cwd, event_data, tool_name,
+    summary, tmux_session, tmux_window, hostname, date_part
+) VALUES (
+    '$(escape_sql "$EVENT_ID")',
+    '$(escape_sql "$SESSION_ID")',
+    '$(escape_sql "$EVENT_TYPE")',
+    '$(escape_sql "$CREATED_AT")',
+    '$(escape_sql "$PROJECT_DIR")',
+    '$(escape_sql "$CWD")',
+    '$(escape_sql "$EVENT_DATA")',
+    '$(escape_sql "$TOOL_NAME")',
+    '$(escape_sql "$SUMMARY")',
+    '$(escape_sql "$TMUX_SESSION")',
+    $(if [[ -n "$TMUX_WINDOW" ]]; then echo "$TMUX_WINDOW"; else echo "NULL"; fi),
+    '$(escape_sql "$HOSTNAME")',
+    '$(escape_sql "$DATE_PART")'
+);"
+
+sqlite3 "$DB_FILE" "$SQL"
