@@ -8,9 +8,8 @@ This plugin tracks Claude Code events and provides desktop notifications when ta
 
 ## Prerequisites
 
-- **jq**: JSON parsing
-- **sqlite3**: Database operations
-- **uuidgen**: UUID generation
+- **bun**: TypeScript runtime and CLI build
+- **jq**: JSON parsing (for notification script)
 - **gcloud**: Gemini API authentication (optional - only for summaries)
 - **osascript** (macOS) or **notify-send** (Linux): Desktop notifications
 
@@ -20,7 +19,14 @@ This plugin tracks Claude Code events and provides desktop notifications when ta
 claude plugin install /path/to/claude-monitoring
 ```
 
-Or for development:
+After installation, build the CLI:
+
+```bash
+cd /path/to/claude-monitoring
+bun run build
+```
+
+For development:
 
 ```bash
 claude --plugin-dir /path/to/claude-monitoring

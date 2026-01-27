@@ -1,0 +1,5 @@
+# Compiled binaries
+bin/
+
+# Bun build artifacts
+*.bun-build
