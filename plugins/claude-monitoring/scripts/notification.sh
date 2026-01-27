@@ -72,7 +72,7 @@ get_gcp_location() {
     echo "asia-northeast1"
 }
 
-# Stopイベントの連続発火を防ぐ（30秒以内の同一セッション）
+# Prevent consecutive Stop event firing (same session within 30 seconds)
 STOP_DEDUP_INTERVAL=30
 should_notify_stop() {
     local session_id="$1"
@@ -111,7 +111,7 @@ generate_summary() {
         transcript_tail=$(tail -c 5000 "$transcript_path" 2>/dev/null)
 
         if [[ -n "$transcript_tail" ]]; then
-            local prompt="以下はClaude Codeのトランスクリプト（会話履歴）の末尾です。何が完了したのか、日本語で15文字以内で簡潔に要約してください。装飾や説明は不要で、要約のみを出力してください。
+            local prompt="The following is the end of Claude Code's transcript (conversation history). Summarize what was completed concisely in 15 words or less. Output only the summary without any decorations or explanations.
 
 $transcript_tail"
 
