@@ -5,7 +5,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DB_FILE="$HOME/.local/share/claude-code/events.db"
+source "$SCRIPT_DIR/config.sh"
 
 # Initialize DB if not exists
 if [[ ! -f "$DB_FILE" ]]; then
@@ -45,7 +45,10 @@ escape_sql() {
     echo "${1//\'/\'\'}"
 }
 
-EVENT_DATA=$(echo "$INPUT" | jq -c '.' 2>/dev/null || echo "{}")
+# Extract only necessary fields for event_data
+EVENT_DATA=$(echo "$INPUT" | jq -c '{
+  session_id, project_directory, cwd, tool_name, reason
+} | with_entries(select(.value != null and .value != ""))' 2>/dev/null || echo "{}")
 
 # Build SQL with proper escaping
 SQL="INSERT INTO events (

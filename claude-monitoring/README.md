@@ -8,6 +8,7 @@ Claude Code event monitoring plugin with desktop notifications and database logg
 - **Database Logging**: All events are logged to SQLite for tracking and querying
 - **Session Tracking**: Track active sessions with `/event-log` command
 - **Tmux Integration**: Quick jump to Claude Code sessions running in tmux
+- **Auto Cleanup**: Records older than 30 days are automatically deleted
 
 ## Installation
 
@@ -68,7 +69,8 @@ If neither is configured, the gcloud default project (`gcloud config get-value p
 
 ## Data Storage
 
-- **Database**: `~/.local/share/claude-code/events.db`
+- **Database**: `~/.local/share/claude-monitoring/events.db`
+- **Retention**: 30 days (older records are automatically deleted)
 
 ## Dependencies
 
@@ -99,6 +101,23 @@ CREATE TABLE events (
 );
 ```
 
+### event_data Fields
+
+The `event_data` column stores only essential fields to minimize database size:
+- `session_id`
+- `project_directory`
+- `cwd`
+- `tool_name`
+- `reason`
+
 ## Migration from Existing Setup
 
 If you were using the scripts from dotfiles (`~/.claude/hooks/notification.sh`), remove the hook configuration from `~/.claude/settings.json` after installing this plugin to avoid duplicate notifications.
+
+**Database Migration**: If you have an existing database at `~/.local/share/claude-code/events.db`, you can migrate it manually:
+
+```bash
+# Move old database to new location
+mkdir -p ~/.local/share/claude-monitoring
+mv ~/.local/share/claude-code/events.db ~/.local/share/claude-monitoring/events.db
+```

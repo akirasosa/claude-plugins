@@ -11,7 +11,7 @@ Query the Claude Code events database and show active sessions.
 
 ## Instructions
 
-1. Run the following SQL query against `~/.local/share/claude-code/events.db`:
+1. Run the following SQL query against `~/.local/share/claude-monitoring/events.db`:
 
 ```sql
 SELECT

@@ -4,8 +4,8 @@
 
 set -euo pipefail
 
-DB_DIR="$HOME/.local/share/claude-code"
-DB_FILE="$DB_DIR/events.db"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/config.sh"
 
 # Create directory if it doesn't exist
 mkdir -p "$DB_DIR"
@@ -34,5 +34,8 @@ CREATE INDEX IF NOT EXISTS idx_events_event_type ON events(event_type);
 CREATE INDEX IF NOT EXISTS idx_events_date_part ON events(date_part);
 CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at);
 EOF
+
+# Run cleanup
+"$SCRIPT_DIR/db-cleanup.sh" 2>/dev/null || true
 
 echo "Database initialized: $DB_FILE"
