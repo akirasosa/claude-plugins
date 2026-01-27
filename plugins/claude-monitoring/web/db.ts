@@ -123,3 +123,28 @@ export function getDbLastModified(): number {
     return 0;
   }
 }
+
+export function endSession(sessionId: string): boolean {
+  if (!dbExists()) {
+    return false;
+  }
+
+  const db = new Database(DB_PATH);
+  try {
+    const eventId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    const datePart = now.split("T")[0];
+
+    db.prepare(
+      `INSERT INTO events (event_id, session_id, event_type, created_at, summary, date_part)
+       VALUES (?, ?, 'SessionEnd', ?, 'Manually terminated', ?)`
+    ).run(eventId, sessionId, now, datePart);
+
+    return true;
+  } catch (err) {
+    console.error("Failed to end session:", err);
+    return false;
+  } finally {
+    db.close();
+  }
+}
