@@ -1,6 +1,6 @@
 {
   "name": "tmux-worktree",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Git worktree workflow with tmux integration for parallel Claude Code sessions",
   "hooks": {
     "SessionStart": [
@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-gtrconfig.sh"
+            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/src/ensure-gtrconfig.ts"
           }
         ]
       }

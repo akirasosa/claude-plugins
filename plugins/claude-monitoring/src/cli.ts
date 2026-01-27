@@ -10,6 +10,11 @@ import {
   type EventInput,
   type EventResponse,
 } from "./db";
+import {
+  handleEvent,
+  type EventType,
+  type NotificationInput,
+} from "./notification";
 
 const USAGE = `
 Usage: claude-monitoring <command> [args]
@@ -20,6 +25,8 @@ Commands:
   cleanup        Delete old records based on retention policy
   event-log      Record an event (stdin: JSON with session_id, cwd)
                  Usage: echo '{"session_id":"...","cwd":"..."}' | claude-monitoring event-log <event_type> [summary]
+  notification   Handle Claude Code hook events (stop, notification, sessionstart, sessionend)
+                 Usage: echo '{"session_id":"...","cwd":"...","transcript_path":"..."}' | claude-monitoring notification <event_type>
   sessions       List active sessions
                  Options: --format json|table (default: json)
   init           Initialize database (run migrations)
@@ -210,6 +217,77 @@ async function handleEventLog(args: string[]): Promise<void> {
   });
 }
 
+async function handleNotificationCommand(args: string[]): Promise<void> {
+  const isBackground = args.includes("--background");
+
+  if (isBackground) {
+    // Background mode: input is passed as base64-encoded argument
+    const eventType = (args[0] || "notification") as EventType;
+    const inputBase64 = args.find((a) => a.startsWith("--input="))?.slice(8);
+    let input: NotificationInput;
+    try {
+      input = JSON.parse(Buffer.from(inputBase64 || "", "base64").toString());
+    } catch {
+      input = {};
+    }
+
+    // Ensure migrations are run
+    try {
+      migrate();
+    } catch {
+      // Ignore migration errors during event handling
+    }
+
+    // Create a logToDb function that uses recordEvent
+    const logToDb = (evtType: string, summary: string): void => {
+      let tmuxWindowId: string | null = null;
+      if (process.env.TMUX) {
+        if (evtType === "SessionStart") {
+          tmuxWindowId = getTmuxWindowId();
+        } else if (input.session_id) {
+          tmuxWindowId = getTmuxWindowIdForSession(input.session_id);
+          if (!tmuxWindowId) {
+            tmuxWindowId = getTmuxWindowId();
+          }
+        }
+      }
+
+      const gitBranch = getGitBranch(input.cwd);
+      const projectName = getProjectName(input.cwd);
+
+      recordEvent({
+        eventType: evtType,
+        summary,
+        input: {
+          session_id: input.session_id,
+          cwd: input.cwd,
+        },
+        tmuxWindowId,
+        gitBranch,
+        projectName,
+      });
+    };
+
+    await handleEvent(eventType, input, logToDb);
+  } else {
+    // Foreground mode: read stdin, spawn background process, exit immediately
+    const eventType = args[0] || "notification";
+    const inputJson = await readStdin();
+    const inputBase64 = Buffer.from(inputJson).toString("base64");
+
+    // Spawn ourselves in background mode
+    const proc = Bun.spawn(
+      ["bun", "run", import.meta.path, "notification", eventType, "--background", `--input=${inputBase64}`],
+      {
+        stdout: "ignore",
+        stderr: "ignore",
+        stdin: "ignore",
+      }
+    );
+    proc.unref();
+  }
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -233,6 +311,10 @@ async function main(): Promise<void> {
 
     case "event-log":
       await handleEventLog(args.slice(1));
+      break;
+
+    case "notification":
+      await handleNotificationCommand(args.slice(1));
       break;
 
     case "sessions":
