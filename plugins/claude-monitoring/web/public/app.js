@@ -96,6 +96,22 @@ function showToast(message, type = "success") {
   }, 2000);
 }
 
+// End session
+async function endSession(sessionId) {
+  try {
+    const response = await fetch(`/api/sessions/${sessionId}/end`, {
+      method: "POST",
+    });
+    if (response.ok) {
+      showToast("Session ended");
+    } else {
+      showToast("Failed to end session", "error");
+    }
+  } catch (err) {
+    showToast("Failed to end session", "error");
+  }
+}
+
 // Clipboard
 async function copyToClipboard(text) {
   try {
@@ -168,6 +184,14 @@ async function renderEvents(events) {
             : '<span class="no-tmux">-</span>'
         }
       </td>
+      <td class="col-actions">
+        <button class="end-session-btn" data-session-id="${escapeHtml(event.session_id)}" title="End session">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+            <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+          </svg>
+        </button>
+      </td>
     </tr>
   `
     )
@@ -195,6 +219,21 @@ async function renderEvents(events) {
         await setReadStatus(eventId, true);
         row.classList.add("read");
       }
+    });
+  });
+
+  // Event listeners for end session buttons
+  tbody.querySelectorAll(".end-session-btn").forEach((btn) => {
+    btn.addEventListener("click", async (e) => {
+      const button = e.target.closest(".end-session-btn");
+      const sessionId = button.dataset.sessionId;
+      const row = button.closest("tr");
+
+      // Add fade-out animation
+      row.style.transition = "opacity 0.3s";
+      row.style.opacity = "0.5";
+
+      await endSession(sessionId);
     });
   });
 }

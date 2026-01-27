@@ -5,6 +5,7 @@ import {
   getDbLastModified,
   getDbPath,
   dbExists,
+  endSession,
   type FilterMode,
 } from "./db";
 
@@ -106,6 +107,18 @@ async function handleRequest(req: Request): Promise<Response> {
       events: getActiveEvents(mode),
       last_modified: getDbLastModified(),
     });
+  }
+
+  // End session API
+  if (path.match(/^\/api\/sessions\/[^/]+\/end$/) && req.method === "POST") {
+    const sessionId = path.split("/")[3];
+    const success = endSession(sessionId);
+    if (success) {
+      // Broadcast update to all connected clients
+      setTimeout(() => broadcastUpdate(), 50);
+      return Response.json({ success: true });
+    }
+    return Response.json({ success: false, error: "Failed to end session" }, { status: 500 });
   }
 
   if (path === "/api/events/stream") {
