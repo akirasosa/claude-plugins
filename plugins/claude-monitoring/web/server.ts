@@ -1,13 +1,23 @@
 import { watch, type FSWatcher } from "fs";
 import { join } from "path";
-import { getActiveEvents, getDbLastModified, getDbPath, dbExists } from "./db";
+import {
+  getActiveEvents,
+  getDbLastModified,
+  getDbPath,
+  dbExists,
+  type FilterMode,
+} from "./db";
 
 const DEFAULT_PORT = 3847;
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
 const PUBLIC_DIR = join(import.meta.dir, "public");
 
 // SSE clients
-const clients: Set<ReadableStreamDefaultController> = new Set();
+interface SSEClient {
+  controller: ReadableStreamDefaultController;
+  mode: FilterMode;
+}
+const clients: Set<SSEClient> = new Set();
 let watcher: FSWatcher | null = null;
 let debounceTimer: Timer | null = null;
 
@@ -29,17 +39,28 @@ async function isOurServerRunning(port: number): Promise<boolean> {
 }
 
 function broadcastUpdate() {
-  const data = JSON.stringify({
-    events: getActiveEvents(),
-    last_modified: getDbLastModified(),
-  });
-  const message = `data: ${data}\n\n`;
+  // Group clients by mode
+  const clientsByMode = new Map<FilterMode, SSEClient[]>();
+  for (const client of clients) {
+    const modeClients = clientsByMode.get(client.mode) || [];
+    modeClients.push(client);
+    clientsByMode.set(client.mode, modeClients);
+  }
 
-  for (const controller of clients) {
-    try {
-      controller.enqueue(new TextEncoder().encode(message));
-    } catch {
-      clients.delete(controller);
+  // Send appropriate data to each mode group
+  for (const [mode, modeClients] of clientsByMode) {
+    const data = JSON.stringify({
+      events: getActiveEvents(mode),
+      last_modified: getDbLastModified(),
+    });
+    const message = `data: ${data}\n\n`;
+
+    for (const client of modeClients) {
+      try {
+        client.controller.enqueue(new TextEncoder().encode(message));
+      } catch {
+        clients.delete(client);
+      }
     }
   }
 }
@@ -80,8 +101,9 @@ async function handleRequest(req: Request): Promise<Response> {
 
   // API routes
   if (path === "/api/events") {
+    const mode = (url.searchParams.get("mode") || "waiting") as FilterMode;
     return Response.json({
-      events: getActiveEvents(),
+      events: getActiveEvents(mode),
       last_modified: getDbLastModified(),
     });
   }
@@ -90,19 +112,23 @@ async function handleRequest(req: Request): Promise<Response> {
     // Start watcher if not already started
     startWatcher();
 
+    const mode = (url.searchParams.get("mode") || "waiting") as FilterMode;
+    let client: SSEClient;
+
     const stream = new ReadableStream({
       start(controller) {
-        clients.add(controller);
+        client = { controller, mode };
+        clients.add(client);
 
         // Send initial data
         const data = JSON.stringify({
-          events: getActiveEvents(),
+          events: getActiveEvents(mode),
           last_modified: getDbLastModified(),
         });
         controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`));
       },
-      cancel(controller) {
-        clients.delete(controller);
+      cancel() {
+        clients.delete(client);
       },
     });
 
