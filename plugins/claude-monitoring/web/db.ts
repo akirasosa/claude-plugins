@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { existsSync } from "fs";
 import { homedir } from "os";
-import { join } from "path";
+import { join, basename } from "path";
 
 export interface Event {
   id: number;
@@ -10,7 +10,7 @@ export interface Event {
   event_type: string;
   created_at: string;
   summary: string | null;
-  tmux_session: string | null;
+  project_dir: string | null;
   tmux_window_id: string | null;
   git_branch: string | null;
 }
@@ -57,7 +57,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
         event_type,
         created_at,
         summary,
-        tmux_session,
+        project_dir,
         tmux_window_id,
         git_branch
       FROM events e1
@@ -82,7 +82,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
       session_id: row.session_id,
       event_type: row.event_type,
       created_at: row.created_at,
-      project_name: row.tmux_session || "unknown",
+      project_name: row.project_dir ? basename(row.project_dir) : "unknown",
       git_branch: row.git_branch || null,
       summary: row.summary || getDefaultSummary(row.event_type),
       tmux_command: getTmuxCommand(row),
