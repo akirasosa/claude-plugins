@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Monitoring</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Claude Monitoring</h1>
+      <div class="status">
+        <span id="connection-status" class="status-indicator disconnected"></span>
+        <span id="connection-text">Connecting...</span>
+      </div>
+    </header>
+
+    <main>
+      <div id="empty-state" class="empty-state hidden">
+        <p>No active sessions found.</p>
+        <p class="hint">Sessions will appear here when Claude Code is running.</p>
+      </div>
+
+      <table id="events-table" class="events-table hidden">
+        <thead>
+          <tr>
+            <th class="col-read">Read</th>
+            <th class="col-project">Project</th>
+            <th class="col-status">Status</th>
+            <th class="col-time">Time</th>
+            <th class="col-summary">Summary</th>
+            <th class="col-jump">Jump</th>
+          </tr>
+        </thead>
+        <tbody id="events-body">
+        </tbody>
+      </table>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

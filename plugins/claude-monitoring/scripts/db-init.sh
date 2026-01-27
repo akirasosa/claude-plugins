@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS events (
     tmux_session TEXT,
     tmux_window INTEGER,
     hostname TEXT,
-    date_part TEXT
+    date_part TEXT,
+    git_branch TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_session_id ON events(session_id);

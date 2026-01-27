@@ -40,6 +40,12 @@ if [[ -n "${TMUX:-}" ]]; then
     TMUX_WINDOW=$(tmux display-message -p '#I' 2>/dev/null || echo "")
 fi
 
+# Get git branch
+GIT_BRANCH=""
+if [[ -n "$CWD" ]]; then
+    GIT_BRANCH=$(git -C "$CWD" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+fi
+
 # Escape for SQLite (double single quotes)
 escape_sql() {
     echo "${1//\'/\'\'}"
@@ -54,7 +60,7 @@ EVENT_DATA=$(echo "$INPUT" | jq -c '{
 SQL="INSERT INTO events (
     event_id, session_id, event_type, created_at,
     project_dir, cwd, event_data, tool_name,
-    summary, tmux_session, tmux_window, hostname, date_part
+    summary, tmux_session, tmux_window, hostname, date_part, git_branch
 ) VALUES (
     '$(escape_sql "$EVENT_ID")',
     '$(escape_sql "$SESSION_ID")',
@@ -68,7 +74,8 @@ SQL="INSERT INTO events (
     '$(escape_sql "$TMUX_SESSION")',
     $(if [[ -n "$TMUX_WINDOW" ]]; then echo "$TMUX_WINDOW"; else echo "NULL"; fi),
     '$(escape_sql "$HOSTNAME")',
-    '$(escape_sql "$DATE_PART")'
+    '$(escape_sql "$DATE_PART")',
+    '$(escape_sql "$GIT_BRANCH")'
 );"
 
 sqlite3 "$DB_FILE" "$SQL"

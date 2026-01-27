@@ -1,0 +1,14 @@
+{
+  "name": "claude-monitoring-web",
+  "version": "1.0.0",
+  "description": "Web UI for Claude Code session monitoring",
+  "type": "module",
+  "scripts": {
+    "start": "bun run server.ts",
+    "dev": "bun --watch run server.ts"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
