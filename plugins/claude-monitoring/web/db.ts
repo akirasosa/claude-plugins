@@ -27,6 +27,8 @@ export interface EventResponse {
   tmux_command: string | null;
 }
 
+export type FilterMode = "waiting" | "active";
+
 const DB_PATH = join(homedir(), ".local/share/claude-monitoring/events.db");
 
 export function getDbPath(): string {
@@ -37,13 +39,16 @@ export function dbExists(): boolean {
   return existsSync(DB_PATH);
 }
 
-export function getActiveEvents(): EventResponse[] {
+export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
   if (!dbExists()) {
     return [];
   }
 
   const db = new Database(DB_PATH, { readonly: true });
   try {
+    const eventTypeFilter =
+      mode === "waiting" ? "AND event_type IN ('Stop', 'Notification')" : "";
+
     const query = `
       SELECT
         id,
@@ -60,7 +65,7 @@ export function getActiveEvents(): EventResponse[] {
         SELECT MAX(created_at) FROM events e2
         WHERE e2.session_id = e1.session_id
       )
-      AND event_type IN ('Stop', 'Notification')
+      ${eventTypeFilter}
       AND NOT EXISTS (
         SELECT 1 FROM events e3
         WHERE e3.session_id = e1.session_id

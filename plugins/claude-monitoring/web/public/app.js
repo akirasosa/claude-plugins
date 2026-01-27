@@ -1,3 +1,42 @@
+// Filter mode state
+let currentMode = "waiting"; // 'waiting' | 'active'
+
+function initModeFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  currentMode = params.get("mode") === "active" ? "active" : "waiting";
+  updateToggleUI(currentMode);
+}
+
+function updateUrlWithMode(mode) {
+  const url = new URL(window.location);
+  if (mode === "waiting") {
+    url.searchParams.delete("mode");
+  } else {
+    url.searchParams.set("mode", mode);
+  }
+  window.history.replaceState({}, "", url);
+}
+
+function updateToggleUI(mode) {
+  const waitingBtn = document.getElementById("mode-waiting");
+  const activeBtn = document.getElementById("mode-active");
+  if (mode === "waiting") {
+    waitingBtn.classList.add("active");
+    activeBtn.classList.remove("active");
+  } else {
+    waitingBtn.classList.remove("active");
+    activeBtn.classList.add("active");
+  }
+}
+
+function setFilterMode(mode) {
+  if (currentMode === mode) return;
+  currentMode = mode;
+  updateUrlWithMode(mode);
+  updateToggleUI(mode);
+  connectSSE(); // Reconnect SSE with new mode
+}
+
 // IndexedDB for read status
 const DB_NAME = "claude-monitoring";
 const STORE_NAME = "read-events";
@@ -194,7 +233,7 @@ function connectSSE() {
     eventSource.close();
   }
 
-  eventSource = new EventSource("/api/events/stream");
+  eventSource = new EventSource(`/api/events/stream?mode=${currentMode}`);
 
   eventSource.onopen = () => {
     setConnectionStatus("connected");
@@ -237,7 +276,7 @@ function connectSSE() {
 
 async function pollEvents() {
   try {
-    const response = await fetch("/api/events");
+    const response = await fetch(`/api/events?mode=${currentMode}`);
     if (response.ok) {
       const data = await response.json();
       renderEvents(data.events);
@@ -250,6 +289,16 @@ async function pollEvents() {
 // Initialize
 async function init() {
   await initDb();
+  initModeFromUrl();
+
+  // Set up filter toggle handlers
+  document.getElementById("mode-waiting").addEventListener("click", () => {
+    setFilterMode("waiting");
+  });
+  document.getElementById("mode-active").addEventListener("click", () => {
+    setFilterMode("active");
+  });
+
   connectSSE();
 }
 

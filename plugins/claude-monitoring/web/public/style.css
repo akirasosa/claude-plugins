@@ -67,6 +67,37 @@ h1 {
   color: var(--text-primary);
 }
 
+.filter-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid var(--border-default);
+}
+
+.filter-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-btn:hover {
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+}
+
+.filter-btn.active {
+  background: var(--accent-blue);
+  color: white;
+}
+
 .status {
   display: flex;
   align-items: center;
@@ -308,6 +339,22 @@ h1 {
 @media (max-width: 768px) {
   .container {
     padding: 16px;
+  }
+
+  header {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .filter-toggle {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-btn {
+    flex: 1;
+    text-align: center;
   }
 
   .events-table th,
