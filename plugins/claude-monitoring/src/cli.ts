@@ -218,56 +218,74 @@ async function handleEventLog(args: string[]): Promise<void> {
 }
 
 async function handleNotificationCommand(args: string[]): Promise<void> {
-  const eventType = (args[0] || "notification") as EventType;
+  const isBackground = args.includes("--background");
 
-  const inputJson = await readStdin();
-  let input: NotificationInput;
-  try {
-    input = JSON.parse(inputJson);
-  } catch {
-    input = {};
-  }
-
-  // Ensure migrations are run
-  try {
-    migrate();
-  } catch {
-    // Ignore migration errors during event handling
-  }
-
-  // Create a logToDb function that uses recordEvent
-  const logToDb = (evtType: string, summary: string): void => {
-    // Determine tmux window ID
-    let tmuxWindowId: string | null = null;
-    if (process.env.TMUX) {
-      if (evtType === "SessionStart") {
-        tmuxWindowId = getTmuxWindowId();
-      } else if (input.session_id) {
-        tmuxWindowId = getTmuxWindowIdForSession(input.session_id);
-        if (!tmuxWindowId) {
-          tmuxWindowId = getTmuxWindowId();
-        }
-      }
+  if (isBackground) {
+    // Background mode: input is passed as base64-encoded argument
+    const eventType = (args[0] || "notification") as EventType;
+    const inputBase64 = args.find((a) => a.startsWith("--input="))?.slice(8);
+    let input: NotificationInput;
+    try {
+      input = JSON.parse(Buffer.from(inputBase64 || "", "base64").toString());
+    } catch {
+      input = {};
     }
 
-    // Get git branch and project name
-    const gitBranch = getGitBranch(input.cwd);
-    const projectName = getProjectName(input.cwd);
+    // Ensure migrations are run
+    try {
+      migrate();
+    } catch {
+      // Ignore migration errors during event handling
+    }
 
-    recordEvent({
-      eventType: evtType,
-      summary,
-      input: {
-        session_id: input.session_id,
-        cwd: input.cwd,
-      },
-      tmuxWindowId,
-      gitBranch,
-      projectName,
-    });
-  };
+    // Create a logToDb function that uses recordEvent
+    const logToDb = (evtType: string, summary: string): void => {
+      let tmuxWindowId: string | null = null;
+      if (process.env.TMUX) {
+        if (evtType === "SessionStart") {
+          tmuxWindowId = getTmuxWindowId();
+        } else if (input.session_id) {
+          tmuxWindowId = getTmuxWindowIdForSession(input.session_id);
+          if (!tmuxWindowId) {
+            tmuxWindowId = getTmuxWindowId();
+          }
+        }
+      }
 
-  await handleEvent(eventType, input, logToDb);
+      const gitBranch = getGitBranch(input.cwd);
+      const projectName = getProjectName(input.cwd);
+
+      recordEvent({
+        eventType: evtType,
+        summary,
+        input: {
+          session_id: input.session_id,
+          cwd: input.cwd,
+        },
+        tmuxWindowId,
+        gitBranch,
+        projectName,
+      });
+    };
+
+    await handleEvent(eventType, input, logToDb);
+  } else {
+    // Foreground mode: read stdin, spawn background process, exit immediately
+    const eventType = args[0] || "notification";
+    const inputJson = await readStdin();
+    const inputBase64 = Buffer.from(inputJson).toString("base64");
+
+    // Spawn ourselves in background mode
+    const proc = Bun.spawn(
+      ["bun", "run", import.meta.path, "notification", eventType, "--background", `--input=${inputBase64}`],
+      {
+        stdout: "ignore",
+        stderr: "ignore",
+        stdin: "ignore",
+      }
+    );
+    proc.unref();
+  }
 }
 
 async function main(): Promise<void> {

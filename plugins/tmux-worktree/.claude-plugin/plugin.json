@@ -8,7 +8,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/ensure-gtrconfig.sh"
+            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/src/ensure-gtrconfig.ts"
           }
         ]
       }
