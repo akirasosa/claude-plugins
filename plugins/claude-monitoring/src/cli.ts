@@ -73,7 +73,37 @@ function getGitBranch(projectDir: string | undefined): string | null {
     return execSync(`git -C "${projectDir}" rev-parse --abbrev-ref HEAD`, {
       encoding: "utf-8",
       timeout: 1000,
+      stdio: ["pipe", "pipe", "pipe"],
     }).trim();
+  } catch {
+    return null;
+  }
+}
+
+function getProjectName(projectDir: string | undefined): string | null {
+  if (!projectDir) {
+    return null;
+  }
+  try {
+    const remoteUrl = execSync(`git -C "${projectDir}" remote get-url origin`, {
+      encoding: "utf-8",
+      timeout: 1000,
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+
+    // Parse SSH URL: git@github.com:user/repo.git -> repo
+    const sshMatch = remoteUrl.match(/[:/]([^/]+?)(?:\.git)?$/);
+    if (sshMatch) {
+      return sshMatch[1].replace(/\.git$/, "");
+    }
+
+    // Parse HTTPS URL: https://github.com/user/repo.git -> repo
+    const httpsMatch = remoteUrl.match(/\/([^/]+?)(?:\.git)?$/);
+    if (httpsMatch) {
+      return httpsMatch[1].replace(/\.git$/, "");
+    }
+
+    return null;
   } catch {
     return null;
   }
@@ -166,8 +196,9 @@ async function handleEventLog(args: string[]): Promise<void> {
     }
   }
 
-  // Get git branch
+  // Get git branch and project name
   const gitBranch = getGitBranch(input.cwd);
+  const projectName = getProjectName(input.cwd);
 
   recordEvent({
     eventType,
@@ -175,6 +206,7 @@ async function handleEventLog(args: string[]): Promise<void> {
     input,
     tmuxWindowId,
     gitBranch,
+    projectName,
   });
 }
 
