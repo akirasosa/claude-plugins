@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS events (
     tool_name TEXT,
     summary TEXT,
     tmux_session TEXT,
-    tmux_window INTEGER,
     hostname TEXT,
     date_part TEXT
 );
