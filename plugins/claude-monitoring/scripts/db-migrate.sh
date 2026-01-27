@@ -43,6 +43,13 @@ has_git_branch_column() {
     [[ "$count" -gt 0 ]]
 }
 
+# Check if tmux_window_id column exists
+has_window_id_column() {
+    local count
+    count=$(sqlite3 "$DB_FILE" "SELECT count(*) FROM pragma_table_info('events') WHERE name='tmux_window_id';" 2>/dev/null || echo "0")
+    [[ "$count" -gt 0 ]]
+}
+
 # Detect version for existing databases without user_version set
 detect_existing_version() {
     if ! table_exists; then
@@ -50,7 +57,9 @@ detect_existing_version() {
         return
     fi
 
-    if has_git_branch_column; then
+    if has_window_id_column; then
+        echo "3"
+    elif has_git_branch_column; then
         echo "2"
     else
         echo "1"

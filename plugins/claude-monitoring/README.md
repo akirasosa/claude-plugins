@@ -52,7 +52,7 @@ Show active Claude Code sessions with tmux jump commands.
 ```
 | Project | Status | Time | Summary | Jump |
 |---------|--------|------|---------|------|
-| dotfiles | Stop | 10:30 | タスク完了 | `tmux switch-client -t 'dotfiles:1'` |
+| dotfiles | Stop | 10:30 | タスク完了 | `tmux switch-client -t '@42'` |
 ```
 
 ## Configuration
@@ -100,8 +100,10 @@ CREATE TABLE events (
     summary TEXT,
     tmux_session TEXT,
     tmux_window INTEGER,
+    tmux_window_id TEXT,
     hostname TEXT,
-    date_part TEXT
+    date_part TEXT,
+    git_branch TEXT
 );
 ```
 
