@@ -25,6 +25,7 @@ export interface EventResponse {
   git_branch: string | null;
   summary: string;
   tmux_command: string | null;
+  tmux_window_id: string | null;
 }
 
 export type FilterMode = "waiting" | "active";
@@ -91,6 +92,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
       git_branch: row.git_branch || null,
       summary: row.summary || getDefaultSummary(row.event_type),
       tmux_command: getTmuxCommand(row),
+      tmux_window_id: row.tmux_window_id || null,
     }));
   } finally {
     db.close();

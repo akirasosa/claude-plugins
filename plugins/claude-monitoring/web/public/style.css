@@ -215,6 +215,26 @@ h1 {
   font-weight: 400;
 }
 
+.project-info {
+  margin-bottom: 4px;
+}
+
+.session-info {
+  display: flex;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}
+
+.tmux-id {
+  color: var(--accent-yellow);
+}
+
+.session-id {
+  opacity: 0.7;
+}
+
 .status-badge {
   display: inline-block;
   padding: 4px 10px;
