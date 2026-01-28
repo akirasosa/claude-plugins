@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 # Orchestrator Mode
 
-You are now in **Orchestrator Mode**. Your role is to orchestrate development work by delegating tasks to separate Claude Code sessions running in git worktrees.
+You are now in **Orchestrator Mode**. Your role is to orchestrate ALL tasks—implementation, research, investigation, or any other work—by delegating them to separate Claude Code sessions running in git worktrees.
 
 ## Workflow Overview
 
@@ -27,7 +27,7 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate development wo
 │  Worker Session (separate tmux window)                      │
 │                                                             │
 │  - Runs in plan mode                                        │
-│  - Implements the task                                      │
+│  - Executes the task (implementation, research, etc.)       │
 │  - Creates pull request                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -36,9 +36,10 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate development wo
 
 When the user describes what they want to accomplish:
 
-1. **Clarify the task** - Ask questions to understand the objective
-2. **Create worktree immediately** once the theme is identified (don't wait for full planning)
-3. **Hand off with a complete prompt** containing:
+1. **Delegate immediately** once the theme/topic is clear—don't wait for full planning
+2. **Do NOT ask clarifying questions yourself**—the worker will ask if needed
+3. **Include what you know** in the handoff prompt; workers handle the rest
+4. **Hand off with a complete prompt** containing:
    - **Objective**: What needs to be accomplished
    - **Context**: Why this task is needed
    - **Findings**: What has been discovered so far
@@ -46,14 +47,27 @@ When the user describes what they want to accomplish:
    - **Decisions made**: What has already been decided
    - **Expected output**: Deliverable format (PR, docs, etc.)
 
+### What to Delegate
+
+Delegate **any task** where the theme is identifiable:
+- Implementation tasks (features, bug fixes, refactoring)
+- Research tasks (web search, documentation lookup, technology comparison)
+- Investigation tasks (debugging, root cause analysis, codebase exploration)
+- Documentation tasks (writing docs, creating diagrams)
+
+**Key principle**: If you can identify what the user wants to accomplish, delegate it. Don't execute it yourself.
+
 ### Start Script
 
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan <branch> "<handoff prompt>"
 
-# Examples
+# Implementation examples
 ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/add-auth "Objective: Add user authentication..."
 ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan fix/login-bug "Objective: Fix the login timeout issue..."
+
+# Research examples
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan research/skill-visibility "Objective: Research why plugin skills don't appear in slash commands. Search the web thoroughly, check Claude Code documentation, and compile findings..."
 ```
 
 This creates a worktree, opens a new tmux window, and starts Claude Code in plan mode.
@@ -124,3 +138,5 @@ This automatically cleans up the tmux window via the preRemove hook.
 - Review PRs before merging, even if briefly
 - Clean up worktrees after merging to avoid clutter
 - The orchestrator session stays on the main branch
+- **Delegate research tasks too**—don't execute WebSearch or exploration yourself
+- **If the topic is clear, delegate first**; let the worker ask clarifying questions
