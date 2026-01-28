@@ -1,13 +1,13 @@
-import { watch, type FSWatcher } from "fs";
-import { join } from "path";
+import { type FSWatcher, watch } from "node:fs";
+import { join } from "node:path";
 import {
+  dbExists,
+  endSession,
+  type FilterMode,
   getActiveEvents,
   getDbLastModified,
   getDbPath,
-  dbExists,
-  endSession,
   migrate,
-  type FilterMode,
 } from "../src/db";
 
 const DEFAULT_PORT = 3847;

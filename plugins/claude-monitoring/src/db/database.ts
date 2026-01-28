@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync } from "fs";
-import { basename } from "path";
-import { DB_DIR, DB_FILE } from "./config";
+import { existsSync, mkdirSync } from "node:fs";
+import { basename } from "node:path";
 import type { Event, EventInput, EventResponse, FilterMode } from "../types";
+import { DB_DIR, DB_FILE } from "./config";
 
 export function getDbPath(): string {
   return DB_FILE;
@@ -33,8 +33,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
 
   const db = getDb(true);
   try {
-    const eventTypeFilter =
-      mode === "waiting" ? "AND event_type IN ('Stop', 'Notification')" : "";
+    const eventTypeFilter = mode === "waiting" ? "AND event_type IN ('Stop', 'Notification')" : "";
 
     const query = `
       SELECT
@@ -131,7 +130,7 @@ export function endSession(sessionId: string): boolean {
 
     db.prepare(
       `INSERT INTO events (event_id, session_id, event_type, created_at, summary, date_part)
-       VALUES (?, ?, 'SessionEnd', ?, 'Manually terminated', ?)`
+       VALUES (?, ?, 'SessionEnd', ?, 'Manually terminated', ?)`,
     ).run(eventId, sessionId, now, datePart);
 
     return true;
@@ -167,7 +166,7 @@ export function recordEvent(options: RecordEventOptions): void {
       `INSERT INTO events (
         event_id, session_id, event_type, created_at,
         project_dir, summary, tmux_window_id, date_part, git_branch, project_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       eventId,
       input.session_id || "",
@@ -178,7 +177,7 @@ export function recordEvent(options: RecordEventOptions): void {
       tmuxWindowId || null,
       datePart,
       gitBranch || "",
-      projectName || null
+      projectName || null,
     );
   } finally {
     db.close();
@@ -194,7 +193,7 @@ export function getTmuxWindowIdForSession(sessionId: string): string | null {
   try {
     const result = db
       .query(
-        "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1"
+        "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
       )
       .get(sessionId) as { tmux_window_id: string | null } | null;
     return result?.tmux_window_id || null;

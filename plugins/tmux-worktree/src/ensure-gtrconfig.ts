@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 
 /**
  * Configure gtr hooks via git config --local

@@ -1,6 +1,6 @@
-import { existsSync, readFileSync } from "fs";
-import { execSync } from "child_process";
-import { getGcpProject, getGcpLocation } from "./config";
+import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { getGcpLocation, getGcpProject } from "./config";
 
 const MODEL_ID = "gemini-2.5-flash";
 const MAX_SUMMARY_LENGTH = 100;
@@ -21,11 +21,13 @@ interface GeminiResponse {
  */
 function getAccessToken(): string | null {
   try {
-    return execSync("gcloud auth print-access-token", {
-      encoding: "utf-8",
-      timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim() || null;
+    return (
+      execSync("gcloud auth print-access-token", {
+        encoding: "utf-8",
+        timeout: 5000,
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim() || null
+    );
   } catch {
     return null;
   }
@@ -79,7 +81,7 @@ ${transcriptTail}`;
  */
 export async function generateSummary(
   transcriptPath: string,
-  eventType: string = "stop"
+  eventType: string = "stop",
 ): Promise<string | null> {
   const projectId = getGcpProject();
   if (!projectId) {

@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
-import { tmpdir } from "os";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const STOP_DEDUP_INTERVAL_MS = 30 * 1000; // 30 seconds
 
@@ -21,7 +21,7 @@ export function shouldNotifyStop(sessionId: string): boolean {
     try {
       const lastTimeStr = readFileSync(stateFile, "utf-8").trim();
       const lastTime = parseInt(lastTimeStr, 10);
-      if (!isNaN(lastTime) && now - lastTime < STOP_DEDUP_INTERVAL_MS) {
+      if (!Number.isNaN(lastTime) && now - lastTime < STOP_DEDUP_INTERVAL_MS) {
         return false; // Skip notification (consecutive Stop)
       }
     } catch {

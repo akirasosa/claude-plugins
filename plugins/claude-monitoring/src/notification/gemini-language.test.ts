@@ -1,6 +1,9 @@
-import { describe, it, expect } from "bun:test";
-import { execSync } from "child_process";
-import { getGcpProject, getGcpLocation } from "./config";
+import { describe, expect, it } from "bun:test";
+import { execSync } from "node:child_process";
+import { getGcpLocation, getGcpProject } from "./config";
+
+// Skip in CI environment - requires GCP authentication
+const isCI = process.env.CI === "true";
 
 const MODEL_ID = "gemini-2.5-flash";
 
@@ -29,11 +32,13 @@ interface GeminiResponse {
 
 function getAccessToken(): string | null {
   try {
-    return execSync("gcloud auth print-access-token", {
-      encoding: "utf-8",
-      timeout: 5000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim() || null;
+    return (
+      execSync("gcloud auth print-access-token", {
+        encoding: "utf-8",
+        timeout: 5000,
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim() || null
+    );
   } catch {
     return null;
   }
@@ -119,24 +124,28 @@ function containsJapanese(text: string): boolean {
   return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
 }
 
-describe("Gemini Language Detection", () => {
+describe.skipIf(isCI)("Gemini Language Detection", () => {
   it("should respond in Japanese for Japanese transcript", async () => {
     const prompt = buildPromptWithLanguage(JAPANESE_TRANSCRIPT, "stop");
     const result = await callGeminiWithPrompt(prompt);
-    
+
     console.log("Japanese transcript result:", result);
-    
-    expect(result).not.toBeNull();
-    expect(containsJapanese(result!)).toBe(true);
+
+    if (result === null) {
+      throw new Error("Expected non-null result from Gemini API");
+    }
+    expect(containsJapanese(result)).toBe(true);
   }, 20000);
 
   it("should respond in English for English transcript", async () => {
     const prompt = buildPromptWithLanguage(ENGLISH_TRANSCRIPT, "stop");
     const result = await callGeminiWithPrompt(prompt);
-    
+
     console.log("English transcript result:", result);
-    
-    expect(result).not.toBeNull();
-    expect(containsJapanese(result!)).toBe(false);
+
+    if (result === null) {
+      throw new Error("Expected non-null result from Gemini API");
+    }
+    expect(containsJapanese(result)).toBe(false);
   }, 20000);
 });
