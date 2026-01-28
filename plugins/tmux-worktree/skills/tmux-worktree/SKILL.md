@@ -1,50 +1,126 @@
 ---
 name: tmux-worktree
-description: Git worktree workflow with tmux integration for parallel Claude Code sessions
+description: Manager mode for orchestrating parallel Claude Code sessions via git worktrees
 user-invocable: true
-disable-model-invocation: false
+disable-model-invocation: true
 ---
 
-# Tmux Worktree Workflow
+# Manager Mode
 
-## When to Create a Worktree
+You are now in **Manager Mode**. Your role is to orchestrate development work by delegating tasks to separate Claude Code sessions running in git worktrees.
 
-**Create a worktree as soon as a topic/task is defined.** No need to wait for the plan to be finalized.
+## Workflow Overview
 
-Workflow stages:
-1. Topic is given ← Create worktree here
-2. Exploration and investigation
-3. Implementation planning
-4. Implementation
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Manager Mode (this session)                                │
+│                                                             │
+│  1. Discuss task with user → Create worktree               │
+│  2. Wait for worker to complete PR                          │
+│  3. Review PR → Merge → Update main → Cleanup               │
+│  4. Repeat                                                  │
+└─────────────────────────────────────────────────────────────┘
+         │                          ▲
+         │ delegate                 │ PR ready
+         ▼                          │
+┌─────────────────────────────────────────────────────────────┐
+│  Worker Session (separate tmux window)                      │
+│                                                             │
+│  - Runs in plan mode                                        │
+│  - Implements the task                                      │
+│  - Creates pull request                                     │
+└─────────────────────────────────────────────────────────────┘
+```
 
-## Start Script
+## Phase 1: Task Delegation
+
+When the user describes what they want to accomplish:
+
+1. **Clarify the task** - Ask questions to understand the objective
+2. **Create worktree immediately** once the theme is identified (don't wait for full planning)
+3. **Hand off with a complete prompt** containing:
+   - **Objective**: What needs to be accomplished
+   - **Context**: Why this task is needed
+   - **Findings**: What has been discovered so far
+   - **Relevant files**: Files to modify or reference
+   - **Decisions made**: What has already been decided
+   - **Expected output**: Deliverable format (PR, docs, etc.)
+
+### Start Script
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/start [--plan] [--from <ref>] <branch> [prompt]
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan <branch> "<handoff prompt>"
 
 # Examples
-${CLAUDE_PLUGIN_ROOT}/scripts/start feat/add-metrics
-${CLAUDE_PLUGIN_ROOT}/scripts/start --from develop feat/add-metrics
-${CLAUDE_PLUGIN_ROOT}/scripts/start fix/bug "Fix the login bug"
-${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/new-feature "Implement..."
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/add-auth "Objective: Add user authentication..."
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan fix/login-bug "Objective: Fix the login timeout issue..."
 ```
 
-This creates a worktree → opens a new tmux window → starts Claude Code.
+This creates a worktree, opens a new tmux window, and starts Claude Code in plan mode.
 
-## Cleanup
+## Phase 2: PR Review and Merge
 
-### Removing a Single Worktree
+When the user returns saying a PR is ready:
 
-Use `git gtr rm <branch>` to remove a worktree. The tmux window is automatically cleaned up via the preRemove hook.
+1. **List open PRs**
+   ```bash
+   gh pr list
+   ```
 
-### Removing Multiple Merged Worktrees
+2. **Review the PR**
+   ```bash
+   gh pr view <number>
+   gh pr diff <number>
+   ```
 
-```bash
-# 1. List merged worktrees (dry run)
-git gtr clean --merged -n
+3. **Perform a lightweight review**
+   - Check the summary and changes
+   - Verify the objective was met
+   - Look for obvious issues
 
-# 2. Remove each worktree individually
-git gtr rm <branch> --yes
-```
+4. **Merge if acceptable**
+   ```bash
+   gh pr merge <number> --squash
+   ```
+   Note: Do NOT use `--delete-branch` here. The worktree still references the branch.
 
-⚠️ **Warning**: Do not use `git gtr clean --merged` directly. It bypasses the preRemove hook and leaves tmux windows orphaned. Always remove worktrees individually with `git gtr rm`.
+5. **Update main branch**
+   ```bash
+   git fetch origin && git pull origin main
+   ```
+
+## Phase 3: Cleanup
+
+After merging, clean up the worktree (this also deletes the local branch):
+
+1. **Check for merged worktrees**
+   ```bash
+   git gtr clean --merged -n
+   ```
+
+2. **Remove individually** (do NOT use `git gtr clean --merged` directly)
+   ```bash
+   git gtr rm <branch> --yes
+   ```
+
+This automatically cleans up the tmux window via the preRemove hook.
+
+## Quick Reference
+
+| Action | Command |
+|--------|---------|
+| Create worktree | `${CLAUDE_PLUGIN_ROOT}/scripts/start --plan <branch> "<prompt>"` |
+| List PRs | `gh pr list` |
+| View PR | `gh pr view <number>` |
+| Merge PR | `gh pr merge <number> --squash` |
+| Update main | `git fetch origin && git pull origin main` |
+| List merged worktrees | `git gtr clean --merged -n` |
+| Remove worktree | `git gtr rm <branch> --yes` |
+
+## Important Notes
+
+- Always use `--plan` flag when starting worker sessions
+- Workers should create PRs, not push directly to main
+- Review PRs before merging, even if briefly
+- Clean up worktrees after merging to avoid clutter
+- The manager session stays on the main branch
