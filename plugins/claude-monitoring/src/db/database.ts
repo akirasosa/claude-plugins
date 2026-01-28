@@ -34,7 +34,8 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
 
   const db = getDb(true);
   try {
-    const eventTypeFilter = mode === "waiting" ? "AND event_type IN ('Stop', 'Notification')" : "";
+    const eventTypeFilter =
+      mode === "waiting" ? "AND (event_type = 'Stop' OR event_type LIKE 'Notification%')" : "";
 
     // For "all" mode, don't exclude ended sessions
     const excludeEndedFilter =
@@ -66,7 +67,8 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
         tmux_window_id,
         git_branch
       FROM events e1
-      WHERE created_at = (
+      WHERE e1.session_id != ''
+      AND created_at = (
         SELECT MAX(created_at) FROM events e2
         WHERE e2.session_id = e1.session_id
       )
@@ -267,7 +269,8 @@ export function getCleanupCandidates(): CleanupCandidate[] {
         e1.project_name,
         e1.project_dir
       FROM events e1
-      WHERE e1.created_at = (
+      WHERE e1.session_id != ''
+      AND e1.created_at = (
         SELECT MAX(e2.created_at) FROM events e2
         WHERE e2.session_id = e1.session_id
       )
