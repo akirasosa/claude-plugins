@@ -9,6 +9,5 @@
     "plugins/tmux-worktree/src/ensure-gtrconfig.ts",
     "plugins/**/*.test.ts"
   ],
-  "project": ["plugins/**/*.ts"],
-  "ignore": ["plugins/claude-monitoring/web/public/**"]
+  "project": ["plugins/**/*.ts"]
 }
