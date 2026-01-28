@@ -205,7 +205,7 @@ export function getTmuxWindowIdForSession(sessionId: string): string | null {
   }
 }
 
-export function getProcessPidForSession(sessionId: string): number | null {
+function getProcessPidForSession(sessionId: string): number | null {
   if (!dbExists() || !sessionId) {
     return null;
   }

@@ -223,6 +223,30 @@ describe("database test helpers", () => {
   });
 });
 
+describe("process tracking", () => {
+  describe("checkProcessExists", () => {
+    // Import the actual function for testing
+    const { checkProcessExists } = require("./database");
+
+    it("should return true for current process PID", () => {
+      const result = checkProcessExists(process.pid);
+      expect(result).toBe(true);
+    });
+
+    it("should return false for non-existent PID", () => {
+      // Use a very high PID that is unlikely to exist
+      const result = checkProcessExists(999999999);
+      expect(result).toBe(false);
+    });
+
+    it("should return false for PID 0", () => {
+      // PID 0 is typically the kernel scheduler, but ps -p 0 usually fails
+      const result = checkProcessExists(0);
+      expect(result).toBe(false);
+    });
+  });
+});
+
 describe("database queries (simulated)", () => {
   let db: Database;
 
@@ -412,6 +436,144 @@ describe("database queries (simulated)", () => {
         .get("no-start-session") as { tmux_window_id: string | null } | null;
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("getProcessPidForSession simulation", () => {
+    it("should return process_pid from SessionStart event", () => {
+      db = createTestDatabase();
+
+      seedEvent(db, {
+        sessionId: "pid-session",
+        eventType: "SessionStart",
+        processPid: 12345,
+      });
+
+      // Add a Stop event without process_pid
+      seedEvent(db, {
+        sessionId: "pid-session",
+        eventType: "Stop",
+      });
+
+      const result = db
+        .query(
+          "SELECT process_pid FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
+        )
+        .get("pid-session") as { process_pid: number | null } | null;
+
+      expect(result?.process_pid).toBe(12345);
+    });
+
+    it("should return null when no SessionStart event", () => {
+      db = createTestDatabase();
+
+      seedEvent(db, {
+        sessionId: "no-start-session",
+        eventType: "Stop",
+      });
+
+      const result = db
+        .query(
+          "SELECT process_pid FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
+        )
+        .get("no-start-session") as { process_pid: number | null } | null;
+
+      expect(result).toBeNull();
+    });
+
+    it("should return null when SessionStart has no process_pid", () => {
+      db = createTestDatabase();
+
+      seedEvent(db, {
+        sessionId: "no-pid-session",
+        eventType: "SessionStart",
+        processPid: null,
+      });
+
+      const result = db
+        .query(
+          "SELECT process_pid FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
+        )
+        .get("no-pid-session") as { process_pid: number | null } | null;
+
+      expect(result?.process_pid).toBeNull();
+    });
+  });
+
+  describe("recordEvent with process_pid simulation", () => {
+    it("should insert event with process_pid", () => {
+      db = createTestDatabase();
+
+      const eventId = crypto.randomUUID();
+      const sessionId = "test-session";
+      const eventType = "SessionStart";
+      const now = new Date().toISOString();
+      const datePart = now.split("T")[0];
+      const processPid = 54321;
+
+      db.prepare(
+        `INSERT INTO events (
+          event_id, session_id, event_type, created_at,
+          project_dir, summary, tmux_window_id, date_part, git_branch, project_name, process_pid
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        eventId,
+        sessionId,
+        eventType,
+        now,
+        "/test/project",
+        "Session started",
+        null,
+        datePart,
+        "main",
+        "test-project",
+        processPid,
+      );
+
+      const events = getAllEvents(db) as Array<{
+        event_type: string;
+        process_pid: number | null;
+      }>;
+
+      expect(events.length).toBe(1);
+      expect(events[0].event_type).toBe("SessionStart");
+      expect(events[0].process_pid).toBe(processPid);
+    });
+
+    it("should allow null process_pid for non-SessionStart events", () => {
+      db = createTestDatabase();
+
+      const eventId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      const datePart = now.split("T")[0];
+
+      db.prepare(
+        `INSERT INTO events (
+          event_id, session_id, event_type, created_at,
+          project_dir, summary, tmux_window_id, date_part, git_branch, project_name, process_pid
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        eventId,
+        "test-session",
+        "Stop",
+        now,
+        "/test/project",
+        "Task completed",
+        null,
+        datePart,
+        "main",
+        "test-project",
+        null,
+      );
+
+      const events = getAllEvents(db) as Array<{
+        event_type: string;
+        process_pid: number | null;
+      }>;
+
+      expect(events.length).toBe(1);
+      expect(events[0].event_type).toBe("Stop");
+      expect(events[0].process_pid).toBeNull();
     });
   });
 });

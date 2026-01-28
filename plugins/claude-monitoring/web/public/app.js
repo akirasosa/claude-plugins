@@ -262,8 +262,8 @@ async function renderEvents(events) {
       if (status.process_running) {
         const confirmed = confirm(
           "Warning: Claude Code session is still running.\n\n" +
-          "Are you sure you want to remove this session from the list?\n" +
-          "(The process will continue running)"
+            "Are you sure you want to remove this session from the list?\n" +
+            "(The process will continue running)",
         );
         if (!confirmed) {
           row.style.opacity = "1";
