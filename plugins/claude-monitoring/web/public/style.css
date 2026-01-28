@@ -184,7 +184,7 @@ h1 {
 }
 
 .col-status {
-  width: 110px;
+  width: 200px;
 }
 
 .col-time {
@@ -243,27 +243,47 @@ h1 {
   font-weight: 500;
 }
 
-.status-badge.Stop {
+/* Badge wrapper for two-part badges */
+.status-badge-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Subtype tag - muted styling for visual hierarchy */
+.status-badge-subtype {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  border: 1px solid var(--border-default);
+}
+
+/* BEM-style badge modifiers */
+.status-badge--stop {
   background: var(--badge-stop-bg);
   color: var(--badge-stop-text);
 }
 
-.status-badge.Notification {
+.status-badge--notification {
   background: var(--badge-notification-bg);
   color: var(--badge-notification-text);
 }
 
-.status-badge.SessionStart {
+.status-badge--sessionstart {
   background: var(--badge-session-bg);
   color: var(--badge-session-text);
 }
 
-.status-badge.SubagentStop {
+.status-badge--subagentstop {
   background: var(--badge-subagent-bg);
   color: var(--badge-subagent-text);
 }
 
-.status-badge.SessionEnd {
+.status-badge--sessionend {
   background: var(--text-muted);
   color: var(--bg-primary);
 }

@@ -247,6 +247,29 @@ function escapeHtml(str: string): string {
   return div.innerHTML;
 }
 
+// Parse event type for badge rendering
+interface EventTypeParts {
+  baseType: string;
+  subType: string | null;
+  cssClass: string;
+}
+
+function parseEventType(eventType: string): EventTypeParts {
+  if (eventType.includes(":")) {
+    const [baseType, subType] = eventType.split(":");
+    return {
+      baseType,
+      subType,
+      cssClass: `status-badge--${baseType.toLowerCase()}`,
+    };
+  }
+  return {
+    baseType: eventType,
+    subType: null,
+    cssClass: `status-badge--${eventType.toLowerCase()}`,
+  };
+}
+
 // Render events
 async function renderEvents(events: EventResponse[]): Promise<void> {
   const tbody = document.getElementById("events-body") as HTMLTableSectionElement | null;
@@ -286,7 +309,16 @@ async function renderEvents(events: EventResponse[]): Promise<void> {
         </div>
       </td>
       <td class="col-status">
-        <span class="status-badge ${event.event_type}">${event.event_type}</span>
+        ${(() => {
+          const { baseType, subType, cssClass } = parseEventType(event.event_type);
+          if (subType) {
+            return `<span class="status-badge-wrapper">
+              <span class="status-badge ${cssClass}">${escapeHtml(baseType)}</span>
+              <span class="status-badge-subtype">${escapeHtml(subType)}</span>
+            </span>`;
+          }
+          return `<span class="status-badge ${cssClass}">${escapeHtml(baseType)}</span>`;
+        })()}
       </td>
       <td class="col-time">
         <span class="time">${formatTime(event.created_at)}</span>
