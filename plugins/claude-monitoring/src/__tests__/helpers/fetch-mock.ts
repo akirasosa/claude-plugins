@@ -2,14 +2,14 @@
  * Fetch mock utilities for testing
  */
 
-export interface MockResponse {
+interface MockResponse {
   ok: boolean;
   status: number;
   json: () => Promise<unknown>;
   text: () => Promise<string>;
 }
 
-export interface GeminiSuccessResponse {
+interface GeminiSuccessResponse {
   candidates: Array<{
     content: {
       parts: Array<{
@@ -19,10 +19,7 @@ export interface GeminiSuccessResponse {
   }>;
 }
 
-/**
- * Create a mock fetch function that returns the specified response
- */
-export function mockFetch(response: MockResponse): typeof fetch {
+function mockFetch(response: MockResponse): typeof fetch {
   return async () => response as Response;
 }
 
@@ -70,22 +67,6 @@ export function mockGeminiError(status = 500, message = "Internal Server Error")
     json: async () => ({ error: { message } }),
     text: async () => JSON.stringify({ error: { message } }),
   });
-}
-
-/**
- * Create a mock fetch that simulates a timeout/abort
- */
-export function mockFetchTimeout(): typeof fetch {
-  return async (_url: string | URL | Request, options?: RequestInit) => {
-    // If signal is provided, simulate abort
-    if (options?.signal) {
-      const error = new Error("The operation was aborted");
-      error.name = "AbortError";
-      throw error;
-    }
-    // Otherwise hang indefinitely (shouldn't happen in tests with proper timeout)
-    return new Promise(() => {});
-  };
 }
 
 /**

@@ -29,7 +29,7 @@ export interface GenerateSummaryDeps {
 /**
  * Get gcloud access token for API authentication
  */
-export function getAccessToken(): string | null {
+function getAccessToken(): string | null {
   try {
     return (
       execSync("gcloud auth print-access-token", {
