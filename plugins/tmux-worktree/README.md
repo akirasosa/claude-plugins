@@ -26,7 +26,7 @@ claude plugin install tmux-worktree
 ## What it does
 
 - **SessionStart hook**: Auto-configures `gtr.hook.preRemove` via `git config --local` for tmux cleanup
-- **Skill**: Provides worktree workflow knowledge to Claude
+- **Command**: Provides Orchestrator Mode (`/orchestrator-mode`) for task delegation
 
 ## Scripts
 

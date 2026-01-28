@@ -1,8 +1,8 @@
 ---
-name: orchestrator-mode
 description: Orchestrator mode for delegating tasks to parallel Claude Code sessions via git worktrees
-user-invocable: true
-disable-model-invocation: true
+allowed-tools:
+  - Bash
+  - Task
 ---
 
 # Orchestrator Mode
