@@ -69,9 +69,20 @@ export function seedEvent(db: Database, options: SeedEventOptions = {}): number 
       `INSERT INTO events (
         event_id, session_id, event_type, created_at,
         project_dir, project_name, summary, tmux_window_id, date_part, git_branch
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .run(eventId, sessionId, eventType, createdAt, projectDir, projectName, summary, tmuxWindowId, datePart, gitBranch);
+    .run(
+      eventId,
+      sessionId,
+      eventType,
+      createdAt,
+      projectDir,
+      projectName,
+      summary,
+      tmuxWindowId,
+      datePart,
+      gitBranch,
+    );
 
   return Number(result.lastInsertRowid);
 }
@@ -82,7 +93,7 @@ export function seedEvent(db: Database, options: SeedEventOptions = {}): number 
 export function seedSessionEvents(
   db: Database,
   sessionId: string,
-  events: Array<{ type: string; summary?: string; minutesAgo?: number }>
+  events: Array<{ type: string; summary?: string; minutesAgo?: number }>,
 ): void {
   const baseTime = Date.now();
 

@@ -3,10 +3,10 @@ import {
   cleanupAll,
   createFile,
   createTempDir,
+  mockFetchNetworkError,
   mockGeminiEmpty,
   mockGeminiError,
   mockGeminiSuccess,
-  mockFetchNetworkError,
   SAMPLE_TRANSCRIPTS,
 } from "../__tests__";
 import { buildPrompt, generateSummary, readTranscriptTail } from "./gemini";
@@ -70,7 +70,7 @@ describe("gemini", () => {
       const result = readTranscriptTail(filePath);
       expect(result).not.toBeNull();
 
-      const lines = result!.split("\n");
+      const lines = result?.split("\n") ?? [];
       expect(lines.length).toBe(50);
       // Should have lines 51-100 (last 50 lines)
       expect(lines[0]).toContain("Line 51");
@@ -99,7 +99,11 @@ describe("gemini", () => {
       const dir = createTempDir("transcript");
       const filePath = createFile(dir, "test.jsonl", SAMPLE_TRANSCRIPTS.english);
 
-      const result = await generateSummary(filePath, "stop", mockDeps(mockGeminiSuccess("Created Dashboard component")));
+      const result = await generateSummary(
+        filePath,
+        "stop",
+        mockDeps(mockGeminiSuccess("Created Dashboard component")),
+      );
 
       expect(result).toBe("Created Dashboard component");
     });
@@ -117,7 +121,11 @@ describe("gemini", () => {
     });
 
     it("should return null when transcript file is missing", async () => {
-      const result = await generateSummary("/non/existent/file.jsonl", "stop", mockDeps(mockGeminiSuccess("test")));
+      const result = await generateSummary(
+        "/non/existent/file.jsonl",
+        "stop",
+        mockDeps(mockGeminiSuccess("test")),
+      );
 
       expect(result).toBeNull();
     });
@@ -166,17 +174,25 @@ describe("gemini", () => {
       const filePath = createFile(dir, "test.jsonl", SAMPLE_TRANSCRIPTS.english);
 
       const longSummary = "A".repeat(150);
-      const result = await generateSummary(filePath, "stop", mockDeps(mockGeminiSuccess(longSummary)));
+      const result = await generateSummary(
+        filePath,
+        "stop",
+        mockDeps(mockGeminiSuccess(longSummary)),
+      );
 
       expect(result).not.toBeNull();
-      expect(result!.length).toBe(100);
+      expect(result?.length).toBe(100);
     });
 
     it("should trim whitespace from summary", async () => {
       const dir = createTempDir("transcript");
       const filePath = createFile(dir, "test.jsonl", SAMPLE_TRANSCRIPTS.english);
 
-      const result = await generateSummary(filePath, "stop", mockDeps(mockGeminiSuccess("  Summary with spaces  ")));
+      const result = await generateSummary(
+        filePath,
+        "stop",
+        mockDeps(mockGeminiSuccess("  Summary with spaces  ")),
+      );
 
       expect(result).toBe("Summary with spaces");
     });

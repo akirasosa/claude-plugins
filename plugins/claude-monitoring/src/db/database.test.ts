@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it } from "bun:test";
 import type { Database } from "bun:sqlite";
+import { afterEach, describe, expect, it } from "bun:test";
 import {
   clearEvents,
   createTestDatabase,
@@ -334,7 +334,7 @@ describe("database queries (simulated)", () => {
         `INSERT INTO events (
           event_id, session_id, event_type, created_at,
           project_dir, summary, tmux_window_id, date_part, git_branch, project_name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).run(
         eventId,
         sessionId,
@@ -345,7 +345,7 @@ describe("database queries (simulated)", () => {
         tmuxWindowId,
         datePart,
         gitBranch,
-        projectName
+        projectName,
       );
 
       const events = getAllEvents(db) as Array<{
@@ -390,7 +390,7 @@ describe("database queries (simulated)", () => {
 
       const result = db
         .query(
-          "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1"
+          "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
         )
         .get("tmux-session") as { tmux_window_id: string | null } | null;
 
@@ -407,7 +407,7 @@ describe("database queries (simulated)", () => {
 
       const result = db
         .query(
-          "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1"
+          "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
         )
         .get("no-start-session") as { tmux_window_id: string | null } | null;
 

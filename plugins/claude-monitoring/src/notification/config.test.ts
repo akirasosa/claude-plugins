@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { cleanupAll, createFile, createTempDir } from "../__tests__";
+import { cleanupAll } from "../__tests__";
 import { getGcpLocation, getGcpProject } from "./config";
 
 describe("config", () => {

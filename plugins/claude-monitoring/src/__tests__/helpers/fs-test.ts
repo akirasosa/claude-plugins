@@ -91,7 +91,10 @@ export function withTempDir<T>(prefix: string, fn: (dir: string) => T): T {
 /**
  * Async context manager for temp directory
  */
-export async function withTempDirAsync<T>(prefix: string, fn: (dir: string) => Promise<T>): Promise<T> {
+export async function withTempDirAsync<T>(
+  prefix: string,
+  fn: (dir: string) => Promise<T>,
+): Promise<T> {
   const dir = createTempDir(prefix);
   try {
     return await fn(dir);
