@@ -282,6 +282,7 @@ async function handleNotificationCommand(args: string[]): Promise<void> {
         stdout: "ignore",
         stderr: "ignore",
         stdin: "ignore",
+        detached: true,
       }
     );
     proc.unref();
