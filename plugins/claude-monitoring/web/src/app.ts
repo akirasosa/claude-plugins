@@ -1,6 +1,7 @@
 import type {
   CleanupPreviewResponse,
   CleanupResponse,
+  ConfirmDialogOptions,
   ConnectionStatus,
   EventResponse,
   EventsApiResponse,
@@ -107,6 +108,74 @@ async function setReadStatus(eventId: string, isRead: boolean): Promise<void> {
     }
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
+  });
+}
+
+// Custom confirmation dialog
+function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
+  return new Promise((resolve) => {
+    const dialog = document.getElementById("confirm-dialog");
+    const titleEl = document.getElementById("confirm-dialog-title");
+    const messageEl = document.getElementById("confirm-dialog-message");
+    const confirmBtn = document.getElementById(
+      "confirm-dialog-confirm",
+    ) as HTMLButtonElement | null;
+    const cancelBtn = document.getElementById("confirm-dialog-cancel") as HTMLButtonElement | null;
+
+    if (!dialog || !titleEl || !messageEl || !confirmBtn || !cancelBtn) {
+      resolve(false);
+      return;
+    }
+
+    // Set content
+    titleEl.textContent = options.title;
+    messageEl.textContent = options.message;
+    confirmBtn.textContent = options.confirmLabel ?? "Confirm";
+    cancelBtn.textContent = options.cancelLabel ?? "Cancel";
+
+    // Show dialog
+    dialog.classList.remove("hidden");
+    confirmBtn.focus();
+
+    // Cleanup function
+    const cleanup = () => {
+      dialog.classList.add("hidden");
+      confirmBtn.removeEventListener("click", handleConfirm);
+      cancelBtn.removeEventListener("click", handleCancel);
+      dialog.removeEventListener("click", handleBackdropClick);
+      document.removeEventListener("keydown", handleKeydown);
+    };
+
+    // Event handlers
+    const handleConfirm = () => {
+      cleanup();
+      resolve(true);
+    };
+
+    const handleCancel = () => {
+      cleanup();
+      resolve(false);
+    };
+
+    const handleBackdropClick = (e: MouseEvent) => {
+      if (e.target === dialog) {
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    // Attach listeners
+    confirmBtn.addEventListener("click", handleConfirm);
+    cancelBtn.addEventListener("click", handleCancel);
+    dialog.addEventListener("click", handleBackdropClick);
+    document.addEventListener("keydown", handleKeydown);
   });
 }
 
@@ -312,11 +381,15 @@ async function renderEvents(events: EventResponse[]): Promise<void> {
       // Check if the Claude Code process is still running
       const status = await checkSessionStatus(sessionId);
       if (status.process_running) {
-        const confirmed = confirm(
-          "Warning: Claude Code session is still running.\n\n" +
-            "Are you sure you want to delete this session?\n" +
-            "(The process will continue running, but all event history will be removed)",
-        );
+        const confirmed = await showConfirmDialog({
+          title: "Delete Running Session",
+          message:
+            "Warning: Claude Code session is still running. " +
+            "The process will continue running, but all event history will be removed.",
+          confirmLabel: "Delete Session",
+          cancelLabel: "Cancel",
+          destructive: true,
+        });
         if (!confirmed) {
           row.style.opacity = "1";
           return;

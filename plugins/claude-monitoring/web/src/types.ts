@@ -42,3 +42,11 @@ export interface CleanupPreviewResponse {
 export interface CleanupResponse {
   deleted_count: number;
 }
+
+export interface ConfirmDialogOptions {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  destructive?: boolean;
+}
