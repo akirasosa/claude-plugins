@@ -1,4 +1,5 @@
 import { Database } from "bun:sqlite";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { basename } from "node:path";
 import type { Event, EventInput, EventResponse, FilterMode } from "../types";
@@ -149,10 +150,11 @@ export interface RecordEventOptions {
   tmuxWindowId?: string | null;
   gitBranch?: string | null;
   projectName?: string | null;
+  processPid?: number | null;
 }
 
 export function recordEvent(options: RecordEventOptions): void {
-  const { eventType, summary, input, tmuxWindowId, gitBranch, projectName } = options;
+  const { eventType, summary, input, tmuxWindowId, gitBranch, projectName, processPid } = options;
 
   ensureDbDir();
   const db = getDb();
@@ -165,8 +167,8 @@ export function recordEvent(options: RecordEventOptions): void {
     db.prepare(
       `INSERT INTO events (
         event_id, session_id, event_type, created_at,
-        project_dir, summary, tmux_window_id, date_part, git_branch, project_name
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        project_dir, summary, tmux_window_id, date_part, git_branch, project_name, process_pid
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       eventId,
       input.session_id || "",
@@ -178,6 +180,7 @@ export function recordEvent(options: RecordEventOptions): void {
       datePart,
       gitBranch || "",
       projectName || null,
+      processPid || null,
     );
   } finally {
     db.close();
@@ -200,4 +203,46 @@ export function getTmuxWindowIdForSession(sessionId: string): string | null {
   } finally {
     db.close();
   }
+}
+
+function getProcessPidForSession(sessionId: string): number | null {
+  if (!dbExists() || !sessionId) {
+    return null;
+  }
+
+  const db = getDb(true);
+  try {
+    const result = db
+      .query(
+        "SELECT process_pid FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
+      )
+      .get(sessionId) as { process_pid: number | null } | null;
+    return result?.process_pid || null;
+  } finally {
+    db.close();
+  }
+}
+
+export function checkProcessExists(pid: number): boolean {
+  try {
+    execSync(`ps -p ${pid}`, { stdio: "pipe", timeout: 1000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export interface SessionStatus {
+  exists: boolean;
+  process_pid: number | null;
+  process_running: boolean;
+}
+
+export function getSessionStatus(sessionId: string): SessionStatus {
+  const pid = getProcessPidForSession(sessionId);
+  return {
+    exists: true,
+    process_pid: pid,
+    process_running: pid ? checkProcessExists(pid) : false,
+  };
 }

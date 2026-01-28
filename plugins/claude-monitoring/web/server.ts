@@ -7,6 +7,7 @@ import {
   getActiveEvents,
   getDbLastModified,
   getDbPath,
+  getSessionStatus,
   migrate,
 } from "../src/db";
 
@@ -121,6 +122,12 @@ async function handleRequest(req: Request): Promise<Response> {
       return Response.json({ success: true });
     }
     return Response.json({ success: false, error: "Failed to end session" }, { status: 500 });
+  }
+
+  // Session status API (for process tracking)
+  if (path.match(/^\/api\/sessions\/[^/]+\/status$/) && req.method === "GET") {
+    const sessionId = path.split("/")[3];
+    return Response.json(getSessionStatus(sessionId));
   }
 
   if (path === "/api/events/stream") {

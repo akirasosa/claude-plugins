@@ -223,6 +223,9 @@ async function handleNotificationCommand(args: string[]): Promise<void> {
     // Background mode: input is passed as base64-encoded argument
     const eventType = (args[0] || "notification") as EventType;
     const inputBase64 = args.find((a) => a.startsWith("--input="))?.slice(8);
+    const pidArg = args.find((a) => a.startsWith("--pid="));
+    const processPid = pidArg ? parseInt(pidArg.slice(6), 10) : null;
+
     let input: NotificationInput;
     try {
       input = JSON.parse(Buffer.from(inputBase64 || "", "base64").toString());
@@ -264,6 +267,7 @@ async function handleNotificationCommand(args: string[]): Promise<void> {
         tmuxWindowId,
         gitBranch,
         projectName,
+        processPid: evtType === "SessionStart" ? processPid : null,
       });
     };
 
@@ -274,24 +278,29 @@ async function handleNotificationCommand(args: string[]): Promise<void> {
     const inputJson = await readStdin();
     const inputBase64 = Buffer.from(inputJson).toString("base64");
 
+    // Capture Claude's PID in foreground mode (only for SessionStart)
+    const claudePid = eventType.toLowerCase() === "sessionstart" ? process.ppid : null;
+
     // Spawn ourselves in background mode
-    const proc = Bun.spawn(
-      [
-        "bun",
-        "run",
-        import.meta.path,
-        "notification",
-        eventType,
-        "--background",
-        `--input=${inputBase64}`,
-      ],
-      {
-        stdout: "ignore",
-        stderr: "ignore",
-        stdin: "ignore",
-        detached: true,
-      },
-    );
+    const spawnArgs = [
+      "bun",
+      "run",
+      import.meta.path,
+      "notification",
+      eventType,
+      "--background",
+      `--input=${inputBase64}`,
+    ];
+    if (claudePid) {
+      spawnArgs.push(`--pid=${claudePid}`);
+    }
+
+    const proc = Bun.spawn(spawnArgs, {
+      stdout: "ignore",
+      stderr: "ignore",
+      stdin: "ignore",
+      detached: true,
+    });
     proc.unref();
   }
 }
