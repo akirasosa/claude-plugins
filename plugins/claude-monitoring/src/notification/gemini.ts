@@ -17,9 +17,19 @@ interface GeminiResponse {
 }
 
 /**
+ * Dependencies that can be injected for testing
+ */
+export interface GenerateSummaryDeps {
+  fetchFn?: typeof fetch;
+  getAccessTokenFn?: () => string | null;
+  getGcpProjectFn?: () => string | null;
+  getGcpLocationFn?: () => string;
+}
+
+/**
  * Get gcloud access token for API authentication
  */
-function getAccessToken(): string | null {
+export function getAccessToken(): string | null {
   try {
     return (
       execSync("gcloud auth print-access-token", {
@@ -36,7 +46,7 @@ function getAccessToken(): string | null {
 /**
  * Read the last N lines of a transcript file
  */
-function readTranscriptTail(transcriptPath: string): string | null {
+export function readTranscriptTail(transcriptPath: string): string | null {
   if (!transcriptPath || !existsSync(transcriptPath)) {
     return null;
   }
@@ -53,7 +63,7 @@ function readTranscriptTail(transcriptPath: string): string | null {
 /**
  * Build the prompt for Gemini based on event type
  */
-function buildPrompt(transcriptTail: string, eventType: string): string {
+export function buildPrompt(transcriptTail: string, eventType: string): string {
   const languageInstruction = `IMPORTANT: Analyze the user's messages in this transcript to determine what language they are using. Your response MUST be in the same language as the user's messages.
 
 `;
@@ -78,12 +88,19 @@ ${transcriptTail}`;
 
 /**
  * Generate a summary using the Gemini API
+ * Supports dependency injection for testing via the deps parameter
  */
 export async function generateSummary(
   transcriptPath: string,
   eventType: string = "stop",
+  deps?: GenerateSummaryDeps,
 ): Promise<string | null> {
-  const projectId = getGcpProject();
+  const fetchFn = deps?.fetchFn ?? fetch;
+  const getAccessTokenFn = deps?.getAccessTokenFn ?? getAccessToken;
+  const getGcpProjectFn = deps?.getGcpProjectFn ?? getGcpProject;
+  const getGcpLocationFn = deps?.getGcpLocationFn ?? getGcpLocation;
+
+  const projectId = getGcpProjectFn();
   if (!projectId) {
     return null;
   }
@@ -93,12 +110,12 @@ export async function generateSummary(
     return null;
   }
 
-  const accessToken = getAccessToken();
+  const accessToken = getAccessTokenFn();
   if (!accessToken) {
     return null;
   }
 
-  const location = getGcpLocation();
+  const location = getGcpLocationFn();
   const apiUrl = `https://aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/${MODEL_ID}:generateContent`;
 
   const prompt = buildPrompt(transcriptTail, eventType);
@@ -107,7 +124,7 @@ export async function generateSummary(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(apiUrl, {
+    const response = await fetchFn(apiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,

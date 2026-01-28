@@ -2,8 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { execSync } from "node:child_process";
 import { getGcpLocation, getGcpProject } from "./config";
 
-// Skip in CI environment - requires GCP authentication
-const isCI = process.env.CI === "true";
+// Integration tests - require GCP authentication
+// Run with: INTEGRATION=true bun test gemini-language.test.ts
+const runIntegration = process.env.INTEGRATION === "true";
 
 const MODEL_ID = "gemini-2.5-flash";
 
@@ -124,7 +125,7 @@ function containsJapanese(text: string): boolean {
   return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(text);
 }
 
-describe.skipIf(isCI)("Gemini Language Detection", () => {
+describe.skipIf(!runIntegration)("Gemini Language Detection - Integration", () => {
   it("should respond in Japanese for Japanese transcript", async () => {
     const prompt = buildPromptWithLanguage(JAPANESE_TRANSCRIPT, "stop");
     const result = await callGeminiWithPrompt(prompt);
