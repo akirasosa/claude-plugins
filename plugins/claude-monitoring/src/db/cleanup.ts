@@ -19,7 +19,7 @@ export function cleanup(): CleanupResult {
     const cutoffDateStr = cutoffDate.toISOString().split("T")[0];
 
     // Delete old records
-    db.exec(`DELETE FROM events WHERE date_part < '${cutoffDateStr}'`);
+    db.prepare("DELETE FROM events WHERE date_part < ?").run(cutoffDateStr);
     const changes = db.query("SELECT changes() as count").get() as { count: number };
     const deleted = changes.count;
 

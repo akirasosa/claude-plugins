@@ -5,21 +5,27 @@ import { join } from "node:path";
 
 const SETTINGS_FILE = join(homedir(), ".claude", "claude-monitoring.local.md");
 
-/**
- * Get GCP project ID for Gemini API
- * Priority: 1. Environment variable, 2. Settings file, 3. gcloud default
- */
-export function getGcpProject(): string | null {
+interface ConfigOptions {
+  envVar: string;
+  settingsKey: string;
+  gcloudCmd?: string;
+  defaultValue?: string;
+}
+
+function getConfigValue(options: ConfigOptions): string | null {
+  const { envVar, settingsKey, gcloudCmd, defaultValue } = options;
+
   // 1. Environment variable
-  if (process.env.GEMINI_GCP_PROJECT) {
-    return process.env.GEMINI_GCP_PROJECT;
+  const envValue = process.env[envVar];
+  if (envValue) {
+    return envValue;
   }
 
   // 2. Settings file
   if (existsSync(SETTINGS_FILE)) {
     try {
       const content = readFileSync(SETTINGS_FILE, "utf-8");
-      const match = content.match(/^gcp_project:\s*(.+)$/m);
+      const match = content.match(new RegExp(`^${settingsKey}:\\s*(.+)$`, "m"));
       if (match) {
         return match[1].trim();
       }
@@ -28,18 +34,35 @@ export function getGcpProject(): string | null {
     }
   }
 
-  // 3. gcloud default project
-  try {
-    return (
-      execSync("gcloud config get-value project", {
-        encoding: "utf-8",
-        timeout: 3000,
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim() || null
-    );
-  } catch {
-    return null;
+  // 3. gcloud command (if provided)
+  if (gcloudCmd) {
+    try {
+      return (
+        execSync(gcloudCmd, {
+          encoding: "utf-8",
+          timeout: 3000,
+          stdio: ["pipe", "pipe", "pipe"],
+        }).trim() || null
+      );
+    } catch {
+      return defaultValue ?? null;
+    }
   }
+
+  // 4. Default value
+  return defaultValue ?? null;
+}
+
+/**
+ * Get GCP project ID for Gemini API
+ * Priority: 1. Environment variable, 2. Settings file, 3. gcloud default
+ */
+export function getGcpProject(): string | null {
+  return getConfigValue({
+    envVar: "GEMINI_GCP_PROJECT",
+    settingsKey: "gcp_project",
+    gcloudCmd: "gcloud config get-value project",
+  });
 }
 
 /**
@@ -47,24 +70,11 @@ export function getGcpProject(): string | null {
  * Priority: 1. Environment variable, 2. Settings file, 3. Default (asia-northeast1)
  */
 export function getGcpLocation(): string {
-  // 1. Environment variable
-  if (process.env.GEMINI_GCP_LOCATION) {
-    return process.env.GEMINI_GCP_LOCATION;
-  }
-
-  // 2. Settings file
-  if (existsSync(SETTINGS_FILE)) {
-    try {
-      const content = readFileSync(SETTINGS_FILE, "utf-8");
-      const match = content.match(/^gcp_location:\s*(.+)$/m);
-      if (match) {
-        return match[1].trim();
-      }
-    } catch {
-      // Ignore file read errors
-    }
-  }
-
-  // 3. Default
-  return "asia-northeast1";
+  return (
+    getConfigValue({
+      envVar: "GEMINI_GCP_LOCATION",
+      settingsKey: "gcp_location",
+      defaultValue: "asia-northeast1",
+    }) ?? "asia-northeast1"
+  );
 }

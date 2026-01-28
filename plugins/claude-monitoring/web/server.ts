@@ -43,6 +43,13 @@ async function isOurServerRunning(port: number): Promise<boolean> {
   return false;
 }
 
+function serializeEventsData(mode: FilterMode): string {
+  return JSON.stringify({
+    events: getActiveEvents(mode),
+    last_modified: getDbLastModified(),
+  });
+}
+
 function broadcastUpdate() {
   // Group clients by mode
   const clientsByMode = new Map<FilterMode, SSEClient[]>();
@@ -54,10 +61,7 @@ function broadcastUpdate() {
 
   // Send appropriate data to each mode group
   for (const [mode, modeClients] of clientsByMode) {
-    const data = JSON.stringify({
-      events: getActiveEvents(mode),
-      last_modified: getDbLastModified(),
-    });
+    const data = serializeEventsData(mode);
     const message = `data: ${data}\n\n`;
 
     for (const client of modeClients) {
@@ -108,9 +112,8 @@ async function handleRequest(req: Request): Promise<Response> {
   // API routes
   if (path === "/api/events") {
     const mode = (url.searchParams.get("mode") || "waiting") as FilterMode;
-    return Response.json({
-      events: getActiveEvents(mode),
-      last_modified: getDbLastModified(),
+    return new Response(serializeEventsData(mode), {
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -164,11 +167,7 @@ async function handleRequest(req: Request): Promise<Response> {
         clients.add(client);
 
         // Send initial data
-        const data = JSON.stringify({
-          events: getActiveEvents(mode),
-          last_modified: getDbLastModified(),
-        });
-        controller.enqueue(new TextEncoder().encode(`data: ${data}\n\n`));
+        controller.enqueue(new TextEncoder().encode(`data: ${serializeEventsData(mode)}\n\n`));
       },
       cancel() {
         clients.delete(client);
