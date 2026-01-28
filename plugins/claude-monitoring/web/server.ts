@@ -2,7 +2,7 @@ import { type FSWatcher, watch } from "node:fs";
 import { join } from "node:path";
 import {
   dbExists,
-  endSession,
+  deleteSession,
   type FilterMode,
   getActiveEvents,
   getDbLastModified,
@@ -112,16 +112,16 @@ async function handleRequest(req: Request): Promise<Response> {
     });
   }
 
-  // End session API
-  if (path.match(/^\/api\/sessions\/[^/]+\/end$/) && req.method === "POST") {
+  // Delete session API
+  if (path.match(/^\/api\/sessions\/[^/]+$/) && req.method === "DELETE") {
     const sessionId = path.split("/")[3];
-    const success = endSession(sessionId);
+    const success = deleteSession(sessionId);
     if (success) {
       // Broadcast update to all connected clients
       setTimeout(() => broadcastUpdate(), 50);
       return Response.json({ success: true });
     }
-    return Response.json({ success: false, error: "Failed to end session" }, { status: 500 });
+    return Response.json({ success: false, error: "Failed to delete session" }, { status: 500 });
   }
 
   // Session status API (for process tracking)

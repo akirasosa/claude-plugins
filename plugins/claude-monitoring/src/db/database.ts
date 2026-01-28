@@ -118,25 +118,18 @@ export function getDbLastModified(): number {
   }
 }
 
-export function endSession(sessionId: string): boolean {
+export function deleteSession(sessionId: string): boolean {
   if (!dbExists()) {
     return false;
   }
 
   const db = getDb();
   try {
-    const eventId = crypto.randomUUID();
-    const now = new Date().toISOString();
-    const datePart = now.split("T")[0];
+    const result = db.prepare(`DELETE FROM events WHERE session_id = ?`).run(sessionId);
 
-    db.prepare(
-      `INSERT INTO events (event_id, session_id, event_type, created_at, summary, date_part)
-       VALUES (?, ?, 'SessionEnd', ?, 'Manually terminated', ?)`,
-    ).run(eventId, sessionId, now, datePart);
-
-    return true;
+    return result.changes > 0;
   } catch (err) {
-    console.error("Failed to end session:", err);
+    console.error("Failed to delete session:", err);
     return false;
   } finally {
     db.close();

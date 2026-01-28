@@ -106,19 +106,19 @@ async function checkSessionStatus(sessionId) {
   }
 }
 
-// End session
-async function endSession(sessionId) {
+// Delete session
+async function deleteSession(sessionId) {
   try {
-    const response = await fetch(`/api/sessions/${sessionId}/end`, {
-      method: "POST",
+    const response = await fetch(`/api/sessions/${sessionId}`, {
+      method: "DELETE",
     });
     if (response.ok) {
-      showToast("Session ended");
+      showToast("Session deleted");
     } else {
-      showToast("Failed to end session", "error");
+      showToast("Failed to delete session", "error");
     }
   } catch (_err) {
-    showToast("Failed to end session", "error");
+    showToast("Failed to delete session", "error");
   }
 }
 
@@ -262,8 +262,8 @@ async function renderEvents(events) {
       if (status.process_running) {
         const confirmed = confirm(
           "Warning: Claude Code session is still running.\n\n" +
-            "Are you sure you want to remove this session from the list?\n" +
-            "(The process will continue running)",
+            "Are you sure you want to delete this session?\n" +
+            "(The process will continue running, but all event history will be removed)",
         );
         if (!confirmed) {
           row.style.opacity = "1";
@@ -271,7 +271,7 @@ async function renderEvents(events) {
         }
       }
 
-      await endSession(sessionId);
+      await deleteSession(sessionId);
     });
   });
 }
