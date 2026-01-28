@@ -3,7 +3,6 @@
  */
 
 import { Database } from "bun:sqlite";
-import type { EventInput } from "../../types";
 
 /**
  * Create an in-memory SQLite database with the events schema
@@ -53,7 +52,7 @@ export interface SeedEventOptions {
 export function seedEvent(db: Database, options: SeedEventOptions = {}): number {
   const {
     eventId = crypto.randomUUID(),
-    sessionId = "test-session-" + Math.random().toString(36).slice(2, 8),
+    sessionId = `test-session-${Math.random().toString(36).slice(2, 8)}`,
     eventType = "Stop",
     createdAt = new Date().toISOString(),
     projectDir = "/test/project",

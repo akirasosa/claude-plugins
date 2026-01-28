@@ -38,7 +38,10 @@ export const SAMPLE_TRANSCRIPTS = {
   minimal: `{"type":"user","message":{"role":"user","content":"Hello"}}`,
 
   /** Long transcript (for testing tail reading) */
-  long: Array.from({ length: 100 }, (_, i) => `{"type":"assistant","message":{"role":"assistant","content":"Line ${i + 1}"}}`).join("\n"),
+  long: Array.from(
+    { length: 100 },
+    (_, i) => `{"type":"assistant","message":{"role":"assistant","content":"Line ${i + 1}"}}`,
+  ).join("\n"),
 };
 
 /**

@@ -18,13 +18,6 @@ describe("dedup", () => {
     createdStateFiles.push(path);
   }
 
-  function cleanupStateFile(sessionId: string): void {
-    const path = getStateFilePath(sessionId);
-    if (existsSync(path)) {
-      rmSync(path);
-    }
-  }
-
   afterEach(() => {
     // Clean up all state files created during tests
     for (const path of createdStateFiles) {
