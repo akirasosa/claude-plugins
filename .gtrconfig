@@ -1,0 +1,2 @@
+[hooks]
+    postCreate = bun install
