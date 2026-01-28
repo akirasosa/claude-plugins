@@ -37,9 +37,10 @@ async function readStdin(): Promise<string> {
   const chunks: Uint8Array[] = [];
   const reader = Bun.stdin.stream().getReader();
 
-  // Set a timeout for reading stdin
+  // Set a timeout for reading stdin (must be cleared to avoid blocking process exit)
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<string>((resolve) => {
-    setTimeout(() => resolve("{}"), 5000);
+    timeoutId = setTimeout(() => resolve("{}"), 5000);
   });
 
   const readPromise = (async () => {
@@ -55,7 +56,12 @@ async function readStdin(): Promise<string> {
     }
   })();
 
-  return Promise.race([readPromise, timeoutPromise]);
+  const result = await Promise.race([readPromise, timeoutPromise]);
+  // Clear timeout to allow process to exit immediately after spawn
+  if (timeoutId !== undefined) {
+    clearTimeout(timeoutId);
+  }
+  return result;
 }
 
 function getTmuxWindowId(): string | null {
