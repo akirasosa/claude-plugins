@@ -27,21 +27,25 @@ export function getDb(readonly = false): Database {
   return new Database(DB_FILE);
 }
 
-export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
-  if (!dbExists()) {
-    return [];
-  }
-
+function withReadOnlyDb<T>(fn: (db: Database) => T, defaultValue: T): T {
+  if (!dbExists()) return defaultValue;
   const db = getDb(true);
   try {
-    const eventTypeFilter =
-      mode === "waiting" ? "AND (event_type = 'Stop' OR event_type LIKE 'Notification%')" : "";
+    return fn(db);
+  } finally {
+    db.close();
+  }
+}
 
-    // For "all" mode, don't exclude ended sessions
-    const excludeEndedFilter =
-      mode === "all"
-        ? ""
-        : `
+function buildActiveEventsQuery(mode: FilterMode): string {
+  const eventTypeFilter =
+    mode === "waiting" ? "AND (event_type = 'Stop' OR event_type LIKE 'Notification%')" : "";
+
+  // For "all" mode, don't exclude ended sessions
+  const excludeEndedFilter =
+    mode === "all"
+      ? ""
+      : `
       AND NOT EXISTS (
         SELECT 1 FROM events e3
         WHERE e3.session_id = e1.session_id
@@ -54,46 +58,51 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
       )
     `;
 
-    const query = `
-      SELECT
-        id,
-        event_id,
-        session_id,
-        event_type,
-        created_at,
-        summary,
-        project_dir,
-        project_name,
-        tmux_window_id,
-        git_branch
-      FROM events e1
-      WHERE e1.session_id != ''
-      AND created_at = (
-        SELECT MAX(created_at) FROM events e2
-        WHERE e2.session_id = e1.session_id
-      )
-      ${eventTypeFilter}
-      ${excludeEndedFilter}
-      ORDER BY created_at DESC
-    `;
+  return `
+    SELECT
+      id,
+      event_id,
+      session_id,
+      event_type,
+      created_at,
+      summary,
+      project_dir,
+      project_name,
+      tmux_window_id,
+      git_branch
+    FROM events e1
+    WHERE e1.session_id != ''
+    AND created_at = (
+      SELECT MAX(created_at) FROM events e2
+      WHERE e2.session_id = e1.session_id
+    )
+    ${eventTypeFilter}
+    ${excludeEndedFilter}
+    ORDER BY created_at DESC
+  `;
+}
 
+function mapEventToResponse(row: Event): EventResponse {
+  return {
+    id: row.id,
+    event_id: row.event_id,
+    session_id: row.session_id,
+    event_type: row.event_type,
+    created_at: row.created_at,
+    project_name: row.project_name || (row.project_dir ? basename(row.project_dir) : "unknown"),
+    git_branch: row.git_branch || null,
+    summary: row.summary || getDefaultSummary(row.event_type),
+    tmux_command: getTmuxCommand(row),
+    tmux_window_id: row.tmux_window_id || null,
+  };
+}
+
+export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
+  return withReadOnlyDb((db) => {
+    const query = buildActiveEventsQuery(mode);
     const rows = db.query(query).all() as Event[];
-
-    return rows.map((row) => ({
-      id: row.id,
-      event_id: row.event_id,
-      session_id: row.session_id,
-      event_type: row.event_type,
-      created_at: row.created_at,
-      project_name: row.project_name || (row.project_dir ? basename(row.project_dir) : "unknown"),
-      git_branch: row.git_branch || null,
-      summary: row.summary || getDefaultSummary(row.event_type),
-      tmux_command: getTmuxCommand(row),
-      tmux_window_id: row.tmux_window_id || null,
-    }));
-  } finally {
-    db.close();
-  }
+    return rows.map(mapEventToResponse);
+  }, []);
 }
 
 function getTmuxCommand(row: Event): string | null {
@@ -191,39 +200,29 @@ export function recordEvent(options: RecordEventOptions): void {
 }
 
 export function getTmuxWindowIdForSession(sessionId: string): string | null {
-  if (!dbExists() || !sessionId) {
-    return null;
-  }
+  if (!sessionId) return null;
 
-  const db = getDb(true);
-  try {
+  return withReadOnlyDb((db) => {
     const result = db
       .query(
         "SELECT tmux_window_id FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
       )
       .get(sessionId) as { tmux_window_id: string | null } | null;
     return result?.tmux_window_id || null;
-  } finally {
-    db.close();
-  }
+  }, null);
 }
 
 function getProcessPidForSession(sessionId: string): number | null {
-  if (!dbExists() || !sessionId) {
-    return null;
-  }
+  if (!sessionId) return null;
 
-  const db = getDb(true);
-  try {
+  return withReadOnlyDb((db) => {
     const result = db
       .query(
         "SELECT process_pid FROM events WHERE session_id = ? AND event_type = 'SessionStart' LIMIT 1",
       )
       .get(sessionId) as { process_pid: number | null } | null;
     return result?.process_pid || null;
-  } finally {
-    db.close();
-  }
+  }, null);
 }
 
 export function checkProcessExists(pid: number): boolean {
@@ -256,18 +255,14 @@ export interface CleanupCandidate {
 }
 
 export function getCleanupCandidates(): CleanupCandidate[] {
-  if (!dbExists()) {
-    return [];
-  }
-
-  const db = getDb(true);
-  try {
-    // Get all distinct sessions with their project_name
+  return withReadOnlyDb((db) => {
+    // Get all distinct sessions with their project_name and process_pid from SessionStart
     const query = `
       SELECT DISTINCT
         e1.session_id,
         e1.project_name,
-        e1.project_dir
+        e1.project_dir,
+        (SELECT process_pid FROM events WHERE session_id = e1.session_id AND event_type = 'SessionStart' LIMIT 1) as process_pid
       FROM events e1
       WHERE e1.session_id != ''
       AND e1.created_at = (
@@ -280,21 +275,17 @@ export function getCleanupCandidates(): CleanupCandidate[] {
       session_id: string;
       project_name: string | null;
       project_dir: string | null;
+      process_pid: number | null;
     }>;
 
-    // Filter by sessions where process is NOT running
+    // Filter by sessions where process is NOT running (check inline without N+1 queries)
     return rows
-      .filter((row) => {
-        const status = getSessionStatus(row.session_id);
-        return !status.process_running;
-      })
+      .filter((row) => !row.process_pid || !checkProcessExists(row.process_pid))
       .map((row) => ({
         session_id: row.session_id,
         project_name: row.project_name || (row.project_dir ? basename(row.project_dir) : null),
       }));
-  } finally {
-    db.close();
-  }
+  }, []);
 }
 
 export interface BulkCleanupResult {

@@ -9,6 +9,28 @@ import type {
   SessionStatusResponse,
 } from "./types";
 
+// Constants
+const TOAST_DURATION_MS = 2000;
+const POLL_INTERVAL_MS = 5000;
+const RECONNECT_TIMEOUT_MS = 30000;
+
+// SVG Icons
+const ICON_CLIPBOARD = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <path d="M4 1.5H3a2 2 0 00-2 2V13a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/>
+  <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/>
+</svg>`;
+
+const ICON_CLIPBOARD_CHECK = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 010 .708l-3 3a.5.5 0 01-.708 0l-1.5-1.5a.5.5 0 11.708-.708L7.5 9.793l2.646-2.647a.5.5 0 01.708 0z"/>
+  <path d="M4 1.5H3a2 2 0 00-2 2V13a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/>
+  <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/>
+</svg>`;
+
+const ICON_TRASH = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+  <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
+  <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+</svg>`;
+
 // Filter mode state
 let currentMode: FilterMode = "waiting";
 
@@ -179,6 +201,15 @@ function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
   });
 }
 
+// Element visibility helpers
+function showElement(el: HTMLElement | null): void {
+  el?.classList.remove("hidden");
+}
+
+function hideElement(el: HTMLElement | null): void {
+  el?.classList.add("hidden");
+}
+
 // Toast notifications
 function showToast(message: string, type: "success" | "error" = "success"): void {
   const toast = document.getElementById("toast");
@@ -189,7 +220,7 @@ function showToast(message: string, type: "success" | "error" = "success"): void
 
   setTimeout(() => {
     toast.classList.add("hidden");
-  }, 2000);
+  }, TOAST_DURATION_MS);
 }
 
 // Check session status (for process tracking)
@@ -270,34 +301,26 @@ function parseEventType(eventType: string): EventTypeParts {
   };
 }
 
-// Render events
-async function renderEvents(events: EventResponse[]): Promise<void> {
-  const tbody = document.getElementById("events-body") as HTMLTableSectionElement | null;
-  const table = document.getElementById("events-table");
-  const emptyState = document.getElementById("empty-state");
-
-  if (!tbody || !table || !emptyState) return;
-
-  if (events.length === 0) {
-    table.classList.add("hidden");
-    emptyState.classList.remove("hidden");
-    return;
+// Build status badge HTML
+function buildStatusBadge(eventType: string): string {
+  const { baseType, subType, cssClass } = parseEventType(eventType);
+  if (subType) {
+    return `<span class="status-badge-wrapper">
+      <span class="status-badge ${cssClass}">${escapeHtml(baseType)}</span>
+      <span class="status-badge-subtype">${escapeHtml(subType)}</span>
+    </span>`;
   }
+  return `<span class="status-badge ${cssClass}">${escapeHtml(baseType)}</span>`;
+}
 
-  table.classList.remove("hidden");
-  emptyState.classList.add("hidden");
+// Build HTML for a single event row
+function buildEventRow(event: EventResponse, isRead: boolean): string {
+  const copyIcon = isRead ? ICON_CLIPBOARD_CHECK : ICON_CLIPBOARD;
+  const copyButton = event.tmux_command
+    ? `<button class="copy-btn ${isRead ? "copied" : ""}" data-command="${escapeHtml(event.tmux_command)}" title="${escapeHtml(event.tmux_command)}">${copyIcon}</button>`
+    : '<span class="no-tmux">-</span>';
 
-  // Build rows with read status
-  const rows = await Promise.all(
-    events.map(async (event) => {
-      const isRead = await getReadStatus(event.event_id);
-      return { event, isRead };
-    }),
-  );
-
-  tbody.innerHTML = rows
-    .map(
-      ({ event, isRead }) => `
+  return `
     <tr class="${isRead ? "read" : ""}" data-event-id="${event.event_id}">
       <td class="col-project">
         <div class="project-info">
@@ -308,57 +331,23 @@ async function renderEvents(events: EventResponse[]): Promise<void> {
           <span class="session-id">${escapeHtml(event.session_id.substring(0, 8))}</span>
         </div>
       </td>
-      <td class="col-status">
-        ${(() => {
-          const { baseType, subType, cssClass } = parseEventType(event.event_type);
-          if (subType) {
-            return `<span class="status-badge-wrapper">
-              <span class="status-badge ${cssClass}">${escapeHtml(baseType)}</span>
-              <span class="status-badge-subtype">${escapeHtml(subType)}</span>
-            </span>`;
-          }
-          return `<span class="status-badge ${cssClass}">${escapeHtml(baseType)}</span>`;
-        })()}
-      </td>
+      <td class="col-status">${buildStatusBadge(event.event_type)}</td>
       <td class="col-time">
         <span class="time">${formatTime(event.created_at)}</span>
       </td>
       <td class="col-summary">
         <span class="summary" title="${escapeHtml(event.summary)}">${escapeHtml(event.summary)}</span>
       </td>
-      <td class="col-copy">
-        ${
-          event.tmux_command
-            ? `<button class="copy-btn ${isRead ? "copied" : ""}" data-command="${escapeHtml(event.tmux_command)}" title="${escapeHtml(event.tmux_command)}">
-                ${
-                  isRead
-                    ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 010 .708l-3 3a.5.5 0 01-.708 0l-1.5-1.5a.5.5 0 11.708-.708L7.5 9.793l2.646-2.647a.5.5 0 01.708 0z"/>
-                      <path d="M4 1.5H3a2 2 0 00-2 2V13a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/>
-                      <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/>
-                    </svg>`
-                    : `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M4 1.5H3a2 2 0 00-2 2V13a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/>
-                      <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/>
-                    </svg>`
-                }
-              </button>`
-            : '<span class="no-tmux">-</span>'
-        }
-      </td>
+      <td class="col-copy">${copyButton}</td>
       <td class="col-actions">
-        <button class="end-session-btn" data-session-id="${escapeHtml(event.session_id)}" title="End session">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M5.5 5.5A.5.5 0 016 6v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm2.5 0a.5.5 0 01.5.5v6a.5.5 0 01-1 0V6a.5.5 0 01.5-.5zm3 .5a.5.5 0 00-1 0v6a.5.5 0 001 0V6z"/>
-            <path fill-rule="evenodd" d="M14.5 3a1 1 0 01-1 1H13v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4h-.5a1 1 0 01-1-1V2a1 1 0 011-1H6a1 1 0 011-1h2a1 1 0 011 1h3.5a1 1 0 011 1v1zM4.118 4L4 4.059V13a1 1 0 001 1h6a1 1 0 001-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-          </svg>
-        </button>
+        <button class="end-session-btn" data-session-id="${escapeHtml(event.session_id)}" title="End session">${ICON_TRASH}</button>
       </td>
     </tr>
-  `,
-    )
-    .join("");
+  `;
+}
 
+// Attach event listeners to table body
+function attachEventListeners(tbody: HTMLTableSectionElement): void {
   // Event listeners for copy buttons
   for (const btn of Array.from(tbody.querySelectorAll(".copy-btn"))) {
     btn.addEventListener("click", async (e: Event) => {
@@ -380,12 +369,7 @@ async function renderEvents(events: EventResponse[]): Promise<void> {
 
       if (!button.classList.contains("copied")) {
         button.classList.add("copied");
-        // Replace SVG with clipboard-check icon
-        button.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 010 .708l-3 3a.5.5 0 01-.708 0l-1.5-1.5a.5.5 0 11.708-.708L7.5 9.793l2.646-2.647a.5.5 0 01.708 0z"/>
-          <path d="M4 1.5H3a2 2 0 00-2 2V13a2 2 0 002 2h10a2 2 0 002-2V3.5a2 2 0 00-2-2h-1v1h1a1 1 0 011 1V13a1 1 0 01-1 1H3a1 1 0 01-1-1V3.5a1 1 0 011-1h1v-1z"/>
-          <path d="M9.5 1a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-3a.5.5 0 01-.5-.5v-1a.5.5 0 01.5-.5h3zm-3-1A1.5 1.5 0 005 1.5v1A1.5 1.5 0 006.5 4h3A1.5 1.5 0 0011 2.5v-1A1.5 1.5 0 009.5 0h-3z"/>
-        </svg>`;
+        button.innerHTML = ICON_CLIPBOARD_CHECK;
 
         await setReadStatus(eventId, true);
         row.classList.add("read");
@@ -431,6 +415,36 @@ async function renderEvents(events: EventResponse[]): Promise<void> {
       await deleteSession(sessionId);
     });
   }
+}
+
+// Render events
+async function renderEvents(events: EventResponse[]): Promise<void> {
+  const tbody = document.getElementById("events-body") as HTMLTableSectionElement | null;
+  const table = document.getElementById("events-table");
+  const emptyState = document.getElementById("empty-state");
+
+  if (!tbody || !table || !emptyState) return;
+
+  if (events.length === 0) {
+    hideElement(table);
+    showElement(emptyState);
+    return;
+  }
+
+  showElement(table);
+  hideElement(emptyState);
+
+  // Build rows with read status
+  const rows = await Promise.all(
+    events.map(async (event) => {
+      const isRead = await getReadStatus(event.event_id);
+      return { event, isRead };
+    }),
+  );
+
+  tbody.innerHTML = rows.map(({ event, isRead }) => buildEventRow(event, isRead)).join("");
+
+  attachEventListeners(tbody);
 }
 
 // Connection status
@@ -493,17 +507,17 @@ function connectSSE(): void {
     // Fallback to polling
     if (!pollTimer) {
       setConnectionStatus("polling");
-      pollTimer = setInterval(pollEvents, 5000);
+      pollTimer = setInterval(pollEvents, POLL_INTERVAL_MS);
       pollEvents(); // Immediate poll
     }
 
-    // Try to reconnect SSE after 30 seconds
+    // Try to reconnect SSE after timeout
     if (reconnectTimer) clearTimeout(reconnectTimer);
     reconnectTimer = setTimeout(() => {
       if (pollTimer) {
         connectSSE();
       }
-    }, 30000);
+    }, RECONNECT_TIMEOUT_MS);
   };
 }
 
@@ -564,14 +578,11 @@ function showCleanupModal(preview: CleanupPreviewResponse): void {
     )
     .join("");
 
-  modal.classList.remove("hidden");
+  showElement(modal);
 }
 
 function hideCleanupModal(): void {
-  const modal = document.getElementById("cleanup-modal");
-  if (modal) {
-    modal.classList.add("hidden");
-  }
+  hideElement(document.getElementById("cleanup-modal"));
 }
 
 // Initialize

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { execSync } from "node:child_process";
 import { getGcpLocation, getGcpProject } from "./config";
+import { buildPrompt, getAccessToken } from "./gemini";
 
 // Integration tests - require GCP authentication
 // Run with: INTEGRATION=true bun test gemini-language.test.ts
@@ -29,46 +29,6 @@ interface GeminiResponse {
       }>;
     };
   }>;
-}
-
-function getAccessToken(): string | null {
-  try {
-    return (
-      execSync("gcloud auth print-access-token", {
-        encoding: "utf-8",
-        timeout: 5000,
-        stdio: ["pipe", "pipe", "pipe"],
-      }).trim() || null
-    );
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Build prompt with language detection instruction
- */
-function buildPromptWithLanguage(transcriptTail: string, eventType: string): string {
-  const languageInstruction = `IMPORTANT: Analyze the user's messages in this transcript to determine what language they are using. Your response MUST be in the same language as the user's messages.
-
-`;
-
-  if (eventType === "notification") {
-    return `${languageInstruction}The following is the end of Claude Code's transcript (JSONL format).
-Claude is waiting for user input. Look for "AskUserQuestion" tool_use to understand what is being asked.
-Summarize what question or input Claude is waiting for in 15 words or less.
-Examples: "Asking which database to use", "Waiting for confirmation to proceed"
-Output only the summary.
-
-${transcriptTail}`;
-  }
-
-  return `${languageInstruction}The following is the end of Claude Code's transcript (JSONL format).
-Summarize what was completed or accomplished in 15 words or less.
-Examples: "Fixed login bug", "Created PR for feature X", "Refactored auth module"
-Output only the summary.
-
-${transcriptTail}`;
 }
 
 /**
@@ -127,7 +87,7 @@ function containsJapanese(text: string): boolean {
 
 describe.skipIf(!runIntegration)("Gemini Language Detection - Integration", () => {
   it("should respond in Japanese for Japanese transcript", async () => {
-    const prompt = buildPromptWithLanguage(JAPANESE_TRANSCRIPT, "stop");
+    const prompt = buildPrompt(JAPANESE_TRANSCRIPT, "stop");
     const result = await callGeminiWithPrompt(prompt);
 
     console.log("Japanese transcript result:", result);
@@ -139,7 +99,7 @@ describe.skipIf(!runIntegration)("Gemini Language Detection - Integration", () =
   }, 20000);
 
   it("should respond in English for English transcript", async () => {
-    const prompt = buildPromptWithLanguage(ENGLISH_TRANSCRIPT, "stop");
+    const prompt = buildPrompt(ENGLISH_TRANSCRIPT, "stop");
     const result = await callGeminiWithPrompt(prompt);
 
     console.log("English transcript result:", result);
