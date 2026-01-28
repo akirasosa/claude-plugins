@@ -1,10 +1,12 @@
 import { type FSWatcher, watch } from "node:fs";
 import { join } from "node:path";
 import {
+  cleanupDeadSessions,
   dbExists,
   deleteSession,
   type FilterMode,
   getActiveEvents,
+  getCleanupCandidates,
   getDbLastModified,
   getDbPath,
   getSessionStatus,
@@ -128,6 +130,25 @@ async function handleRequest(req: Request): Promise<Response> {
   if (path.match(/^\/api\/sessions\/[^/]+\/status$/) && req.method === "GET") {
     const sessionId = path.split("/")[3];
     return Response.json(getSessionStatus(sessionId));
+  }
+
+  // Cleanup preview API - returns sessions that would be deleted
+  if (path === "/api/cleanup/preview" && req.method === "GET") {
+    const candidates = getCleanupCandidates();
+    return Response.json({
+      count: candidates.length,
+      sessions: candidates,
+    });
+  }
+
+  // Cleanup API - performs bulk deletion of dead sessions
+  if (path === "/api/cleanup" && req.method === "POST") {
+    const result = cleanupDeadSessions();
+    if (result.deleted_count > 0) {
+      // Broadcast update to all connected clients
+      setTimeout(() => broadcastUpdate(), 50);
+    }
+    return Response.json(result);
   }
 
   if (path === "/api/events/stream") {
