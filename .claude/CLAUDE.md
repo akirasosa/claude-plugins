@@ -1,25 +1,36 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Claude Code Plugin Marketplace - community plugins for enhancing Claude Code workflow.
 
-## Project Overview
+## Language Policy
 
-Claude Code Plugin Marketplace - hosts plugins for enhancing Claude Code workflow (tmux-worktree, claude-monitoring).
+IMPORTANT: All content in this repository MUST be in English. This includes code, comments, documentation, commit messages, issues, and pull requests. This is a public repository for the global community.
 
-## Development Commands
-
-### claude-monitoring plugin
-```bash
-cd plugins/claude-monitoring && bun test                        # Run tests
-cd plugins/claude-monitoring && bun test --watch                # Watch mode
-cd plugins/claude-monitoring/web && bun run start               # Start server
-cd plugins/claude-monitoring/web && bun run dev                 # Dev server (TS watch + server)
-bun run plugins/claude-monitoring/src/cli.ts <command>          # CLI execution
-```
-
-## Architecture
+## Project Structure
 
 - Multi-plugin monorepo under `plugins/`
 - Each plugin has `.claude-plugin/plugin.json` manifest
 - Plugins integrate via Claude Code hooks: SessionStart, Stop, Notification, SessionEnd
 - `${CLAUDE_PLUGIN_ROOT}` substituted at runtime for plugin paths
+
+## Development Commands
+
+```bash
+# claude-monitoring plugin
+cd plugins/claude-monitoring && bun test              # Run tests
+cd plugins/claude-monitoring && bun test --watch      # Watch mode
+cd plugins/claude-monitoring/web && bun run start     # Start server
+cd plugins/claude-monitoring/web && bun run dev       # Dev server (TS watch + server)
+bun run plugins/claude-monitoring/src/cli.ts <cmd>    # CLI execution
+```
+
+## Quality Standards
+
+Pre-commit hooks enforce: Biome lint/format, TypeScript types, 95% type coverage, Knip dead code detection, security audit. Run `bun run lint:fix` before committing.
+
+## Contributing
+
+1. Create feature branch from main
+2. Follow existing patterns in similar code
+3. All tests must pass before PR
+4. Require PR review for main branch
