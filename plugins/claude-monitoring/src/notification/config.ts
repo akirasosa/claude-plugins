@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from "fs";
-import { execSync } from "child_process";
-import { join } from "path";
-import { homedir } from "os";
+import { execSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 const SETTINGS_FILE = join(homedir(), ".claude", "claude-monitoring.local.md");
 
@@ -30,11 +30,13 @@ export function getGcpProject(): string | null {
 
   // 3. gcloud default project
   try {
-    return execSync("gcloud config get-value project", {
-      encoding: "utf-8",
-      timeout: 3000,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).trim() || null;
+    return (
+      execSync("gcloud config get-value project", {
+        encoding: "utf-8",
+        timeout: 3000,
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim() || null
+    );
   } catch {
     return null;
   }

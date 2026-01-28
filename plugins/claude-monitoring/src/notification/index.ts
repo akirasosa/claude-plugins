@@ -1,11 +1,11 @@
-import { showNotification } from "./platform-notify";
 import { shouldNotifyStop } from "./dedup";
 import { generateSummary } from "./gemini";
+import { showNotification } from "./platform-notify";
 
-export { showNotification } from "./platform-notify";
+export { getGcpLocation, getGcpProject } from "./config";
 export { shouldNotifyStop } from "./dedup";
 export { generateSummary } from "./gemini";
-export { getGcpProject, getGcpLocation } from "./config";
+export { showNotification } from "./platform-notify";
 
 export type EventType = "stop" | "notification" | "sessionstart" | "sessionend";
 
@@ -27,7 +27,7 @@ export interface HandleEventResult {
  */
 async function handleStop(
   input: NotificationInput,
-  logToDb: (eventType: string, summary: string) => void
+  logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   const transcriptPath = input.transcript_path || "";
   const sessionId = input.session_id || "";
@@ -57,7 +57,7 @@ async function handleStop(
  */
 async function handleNotification(
   input: NotificationInput,
-  logToDb: (eventType: string, summary: string) => void
+  logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   const transcriptPath = input.transcript_path || "";
 
@@ -79,7 +79,7 @@ async function handleNotification(
  */
 async function handleSessionStart(
   _input: NotificationInput,
-  logToDb: (eventType: string, summary: string) => void
+  logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   logToDb("SessionStart", "Session started");
 
@@ -95,7 +95,7 @@ async function handleSessionStart(
  */
 async function handleSessionEnd(
   input: NotificationInput,
-  logToDb: (eventType: string, summary: string) => void
+  logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   const reason = input.reason || "unknown";
   const summary = `reason=${reason}`;
@@ -115,7 +115,7 @@ async function handleSessionEnd(
 export async function handleEvent(
   eventType: EventType,
   input: NotificationInput,
-  logToDb: (eventType: string, summary: string) => void
+  logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   switch (eventType) {
     case "stop":

@@ -1,20 +1,15 @@
 #!/usr/bin/env bun
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import {
-  migrate,
   checkMigrations,
   cleanup,
-  recordEvent,
-  getTmuxWindowIdForSession,
-  getActiveEvents,
   type EventInput,
-  type EventResponse,
+  getActiveEvents,
+  getTmuxWindowIdForSession,
+  migrate,
+  recordEvent,
 } from "./db";
-import {
-  handleEvent,
-  type EventType,
-  type NotificationInput,
-} from "./notification";
+import { type EventType, handleEvent, type NotificationInput } from "./notification";
 
 const USAGE = `
 Usage: claude-monitoring <command> [args]
@@ -156,16 +151,14 @@ function handleSessions(args: string[]): void {
       console.log("No active sessions found.");
       return;
     }
-    console.log(
-      "| Project | Status | Time | Branch | Summary | Jump |"
-    );
+    console.log("| Project | Status | Time | Branch | Summary | Jump |");
     console.log("|---------|--------|------|--------|---------|------|");
     for (const s of sessions) {
       const project = s.project_name;
       const status = s.event_type;
       const time = formatTime(s.created_at);
       const branch = s.git_branch || "-";
-      const summary = s.summary.length > 30 ? s.summary.slice(0, 27) + "..." : s.summary;
+      const summary = s.summary.length > 30 ? `${s.summary.slice(0, 27)}...` : s.summary;
       const jump = s.tmux_command ? `\`${s.tmux_command}\`` : "-";
       console.log(`| ${project} | ${status} | ${time} | ${branch} | ${summary} | ${jump} |`);
     }
@@ -283,13 +276,21 @@ async function handleNotificationCommand(args: string[]): Promise<void> {
 
     // Spawn ourselves in background mode
     const proc = Bun.spawn(
-      ["bun", "run", import.meta.path, "notification", eventType, "--background", `--input=${inputBase64}`],
+      [
+        "bun",
+        "run",
+        import.meta.path,
+        "notification",
+        eventType,
+        "--background",
+        `--input=${inputBase64}`,
+      ],
       {
         stdout: "ignore",
         stderr: "ignore",
         stdin: "ignore",
         detached: true,
-      }
+      },
     );
     proc.unref();
   }

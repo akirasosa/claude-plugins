@@ -1,8 +1,8 @@
 import { Database } from "bun:sqlite";
-import { existsSync, readdirSync, readFileSync } from "fs";
-import { join, dirname } from "path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { DB_FILE } from "./config";
-import { ensureDbDir, dbExists } from "./database";
+import { dbExists, ensureDbDir } from "./database";
 
 function getMigrationsDir(): string {
   // When compiled, process.execPath gives the actual binary path
@@ -33,16 +33,16 @@ function setDbVersion(db: Database, version: number): void {
 }
 
 function tableExists(db: Database, tableName: string): boolean {
-  const result = db.query(
-    "SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name=?"
-  ).get(tableName) as { count: number };
+  const result = db
+    .query("SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name=?")
+    .get(tableName) as { count: number };
   return result.count > 0;
 }
 
 function columnExists(db: Database, tableName: string, columnName: string): boolean {
-  const result = db.query(
-    `SELECT count(*) as count FROM pragma_table_info('${tableName}') WHERE name=?`
-  ).get(columnName) as { count: number };
+  const result = db
+    .query(`SELECT count(*) as count FROM pragma_table_info('${tableName}') WHERE name=?`)
+    .get(columnName) as { count: number };
   return result.count > 0;
 }
 
