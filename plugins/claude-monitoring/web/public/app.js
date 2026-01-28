@@ -96,6 +96,16 @@ function showToast(message, type = "success") {
   }, 2000);
 }
 
+// Check session status (for process tracking)
+async function checkSessionStatus(sessionId) {
+  try {
+    const response = await fetch(`/api/sessions/${sessionId}/status`);
+    return response.ok ? await response.json() : { process_running: false };
+  } catch {
+    return { process_running: false };
+  }
+}
+
 // End session
 async function endSession(sessionId) {
   try {
@@ -246,6 +256,20 @@ async function renderEvents(events) {
       // Add fade-out animation
       row.style.transition = "opacity 0.3s";
       row.style.opacity = "0.5";
+
+      // Check if the Claude Code process is still running
+      const status = await checkSessionStatus(sessionId);
+      if (status.process_running) {
+        const confirmed = confirm(
+          "Warning: Claude Code session is still running.\n\n" +
+          "Are you sure you want to remove this session from the list?\n" +
+          "(The process will continue running)"
+        );
+        if (!confirmed) {
+          row.style.opacity = "1";
+          return;
+        }
+      }
 
       await endSession(sessionId);
     });

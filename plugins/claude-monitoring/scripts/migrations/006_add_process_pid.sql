@@ -1,0 +1,1 @@
+ALTER TABLE events ADD COLUMN process_pid INTEGER;
