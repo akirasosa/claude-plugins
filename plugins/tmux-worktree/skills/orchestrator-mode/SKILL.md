@@ -1,19 +1,19 @@
 ---
-name: tmux-worktree
-description: Manager mode for orchestrating parallel Claude Code sessions via git worktrees
+name: orchestrator-mode
+description: Orchestrator mode for delegating tasks to parallel Claude Code sessions via git worktrees
 user-invocable: true
 disable-model-invocation: true
 ---
 
-# Manager Mode
+# Orchestrator Mode
 
-You are now in **Manager Mode**. Your role is to orchestrate development work by delegating tasks to separate Claude Code sessions running in git worktrees.
+You are now in **Orchestrator Mode**. Your role is to orchestrate development work by delegating tasks to separate Claude Code sessions running in git worktrees.
 
 ## Workflow Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Manager Mode (this session)                                │
+│  Orchestrator Mode (this session)                                │
 │                                                             │
 │  1. Discuss task with user → Create worktree               │
 │  2. Wait for worker to complete PR                          │
@@ -123,4 +123,4 @@ This automatically cleans up the tmux window via the preRemove hook.
 - Workers should create PRs, not push directly to main
 - Review PRs before merging, even if briefly
 - Clean up worktrees after merging to avoid clutter
-- The manager session stays on the main branch
+- The orchestrator session stays on the main branch
