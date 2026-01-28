@@ -16,11 +16,13 @@ interface GeminiResponse {
   }>;
 }
 
+type FetchFn = (url: string | URL | Request, options?: RequestInit) => Promise<Response>;
+
 /**
  * Dependencies that can be injected for testing
  */
 export interface GenerateSummaryDeps {
-  fetchFn?: typeof fetch;
+  fetchFn?: FetchFn;
   getAccessTokenFn?: () => string | null;
   getGcpProjectFn?: () => string | null;
   getGcpLocationFn?: () => string;

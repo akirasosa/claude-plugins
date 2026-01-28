@@ -385,7 +385,7 @@ describe("database queries (simulated)", () => {
       seedEvent(db, {
         sessionId: "tmux-session",
         eventType: "Stop",
-        tmuxWindowId: null,
+        tmuxWindowId: undefined,
       });
 
       const result = db

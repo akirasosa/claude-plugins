@@ -2,6 +2,8 @@
  * Fetch mock utilities for testing
  */
 
+type FetchFn = (url: string | URL | Request, options?: RequestInit) => Promise<Response>;
+
 interface MockResponse {
   ok: boolean;
   status: number;
@@ -19,14 +21,14 @@ interface GeminiSuccessResponse {
   }>;
 }
 
-function mockFetch(response: MockResponse): typeof fetch {
+function mockFetch(response: MockResponse): FetchFn {
   return async () => response as Response;
 }
 
 /**
  * Create a mock fetch that returns a successful Gemini API response
  */
-export function mockGeminiSuccess(text: string): typeof fetch {
+export function mockGeminiSuccess(text: string): FetchFn {
   const response: GeminiSuccessResponse = {
     candidates: [
       {
@@ -48,7 +50,7 @@ export function mockGeminiSuccess(text: string): typeof fetch {
 /**
  * Create a mock fetch that returns an empty Gemini response (no candidates)
  */
-export function mockGeminiEmpty(): typeof fetch {
+export function mockGeminiEmpty(): FetchFn {
   return mockFetch({
     ok: true,
     status: 200,
@@ -60,7 +62,7 @@ export function mockGeminiEmpty(): typeof fetch {
 /**
  * Create a mock fetch that returns a Gemini API error
  */
-export function mockGeminiError(status = 500, message = "Internal Server Error"): typeof fetch {
+export function mockGeminiError(status = 500, message = "Internal Server Error"): FetchFn {
   return mockFetch({
     ok: false,
     status,
@@ -72,7 +74,7 @@ export function mockGeminiError(status = 500, message = "Internal Server Error")
 /**
  * Create a mock fetch that throws a network error
  */
-export function mockFetchNetworkError(message = "Network error"): typeof fetch {
+export function mockFetchNetworkError(message = "Network error"): FetchFn {
   return async () => {
     throw new Error(message);
   };

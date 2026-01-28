@@ -88,7 +88,9 @@ describe("gemini", () => {
   });
 
   describe("generateSummary", () => {
-    const mockDeps = (fetchFn: typeof fetch) => ({
+    type FetchFn = (url: string | URL | Request, options?: RequestInit) => Promise<Response>;
+
+    const mockDeps = (fetchFn: FetchFn) => ({
       fetchFn,
       getAccessTokenFn: () => "mock-token",
       getGcpProjectFn: () => "mock-project",
@@ -202,7 +204,10 @@ describe("gemini", () => {
       const filePath = createFile(dir, "test.jsonl", SAMPLE_TRANSCRIPTS.askUserQuestion);
 
       let capturedBody: string | undefined;
-      const capturingFetch: typeof fetch = async (url, options) => {
+      const capturingFetch = async (
+        url: string | URL | Request,
+        options?: RequestInit,
+      ): Promise<Response> => {
         capturedBody = options?.body as string;
         return mockGeminiSuccess("Asking about database choice")(url, options);
       };
