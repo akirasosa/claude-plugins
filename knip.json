@@ -3,6 +3,7 @@
   "entry": [
     "plugins/claude-monitoring/src/cli.ts",
     "plugins/claude-monitoring/web/server.ts",
+    "plugins/claude-monitoring/web/src/app.ts",
     "plugins/claude-monitoring/src/db/index.ts",
     "plugins/claude-monitoring/src/notification/index.ts",
     "plugins/tmux-worktree/src/ensure-gtrconfig.ts",

@@ -51,10 +51,10 @@
     {
       "includes": ["**/public/**/*.js"],
       "linter": {
-        "rules": {
-          "correctness": { "noUnusedImports": "off" },
-          "style": { "useImportType": "off" }
-        }
+        "enabled": false
+      },
+      "formatter": {
+        "enabled": false
       }
     }
   ]

@@ -1,14 +1,22 @@
-// Filter mode state
-let currentMode = "waiting"; // 'waiting' | 'active'
+import type {
+  ConnectionStatus,
+  EventResponse,
+  EventsApiResponse,
+  FilterMode,
+  SessionStatusResponse,
+} from "./types";
 
-function initModeFromUrl() {
+// Filter mode state
+let currentMode: FilterMode = "waiting";
+
+function initModeFromUrl(): void {
   const params = new URLSearchParams(window.location.search);
   currentMode = params.get("mode") === "active" ? "active" : "waiting";
   updateToggleUI(currentMode);
 }
 
-function updateUrlWithMode(mode) {
-  const url = new URL(window.location);
+function updateUrlWithMode(mode: FilterMode): void {
+  const url = new URL(window.location.href);
   if (mode === "waiting") {
     url.searchParams.delete("mode");
   } else {
@@ -17,9 +25,11 @@ function updateUrlWithMode(mode) {
   window.history.replaceState({}, "", url);
 }
 
-function updateToggleUI(mode) {
+function updateToggleUI(mode: FilterMode): void {
   const waitingBtn = document.getElementById("mode-waiting");
   const activeBtn = document.getElementById("mode-active");
+  if (!waitingBtn || !activeBtn) return;
+
   if (mode === "waiting") {
     waitingBtn.classList.add("active");
     activeBtn.classList.remove("active");
@@ -29,7 +39,7 @@ function updateToggleUI(mode) {
   }
 }
 
-function setFilterMode(mode) {
+function setFilterMode(mode: FilterMode): void {
   if (currentMode === mode) return;
   currentMode = mode;
   updateUrlWithMode(mode);
@@ -40,9 +50,9 @@ function setFilterMode(mode) {
 // IndexedDB for read status
 const DB_NAME = "claude-monitoring";
 const STORE_NAME = "read-events";
-let db = null;
+let db: IDBDatabase | null = null;
 
-async function initDb() {
+async function initDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, 1);
     request.onerror = () => reject(request.error);
@@ -51,18 +61,20 @@ async function initDb() {
       resolve(db);
     };
     request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
+      const target = event.target as IDBOpenDBRequest;
+      const database = target.result;
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME);
       }
     };
   });
 }
 
-async function getReadStatus(eventId) {
-  if (!db) return false;
+async function getReadStatus(eventId: string): Promise<boolean> {
+  const database = db;
+  if (!database) return false;
   return new Promise((resolve) => {
-    const tx = db.transaction(STORE_NAME, "readonly");
+    const tx = database.transaction(STORE_NAME, "readonly");
     const store = tx.objectStore(STORE_NAME);
     const request = store.get(eventId);
     request.onsuccess = () => resolve(!!request.result);
@@ -70,10 +82,11 @@ async function getReadStatus(eventId) {
   });
 }
 
-async function setReadStatus(eventId, isRead) {
-  if (!db) return;
+async function setReadStatus(eventId: string, isRead: boolean): Promise<void> {
+  const database = db;
+  if (!database) return;
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
+    const tx = database.transaction(STORE_NAME, "readwrite");
     const store = tx.objectStore(STORE_NAME);
     if (isRead) {
       store.put(true, eventId);
@@ -86,8 +99,10 @@ async function setReadStatus(eventId, isRead) {
 }
 
 // Toast notifications
-function showToast(message, type = "success") {
+function showToast(message: string, type: "success" | "error" = "success"): void {
   const toast = document.getElementById("toast");
+  if (!toast) return;
+
   toast.textContent = message;
   toast.className = `toast ${type}`;
 
@@ -97,17 +112,19 @@ function showToast(message, type = "success") {
 }
 
 // Check session status (for process tracking)
-async function checkSessionStatus(sessionId) {
+async function checkSessionStatus(sessionId: string): Promise<SessionStatusResponse> {
   try {
     const response = await fetch(`/api/sessions/${sessionId}/status`);
-    return response.ok ? await response.json() : { process_running: false };
+    return response.ok
+      ? await response.json()
+      : { exists: false, process_pid: null, process_running: false };
   } catch {
-    return { process_running: false };
+    return { exists: false, process_pid: null, process_running: false };
   }
 }
 
 // Delete session
-async function deleteSession(sessionId) {
+async function deleteSession(sessionId: string): Promise<void> {
   try {
     const response = await fetch(`/api/sessions/${sessionId}`, {
       method: "DELETE",
@@ -117,23 +134,23 @@ async function deleteSession(sessionId) {
     } else {
       showToast("Failed to delete session", "error");
     }
-  } catch (_err) {
+  } catch {
     showToast("Failed to delete session", "error");
   }
 }
 
 // Clipboard
-async function copyToClipboard(text, label = "text") {
+async function copyToClipboard(text: string, label = "text"): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
     showToast(`Copied ${label} to clipboard!`);
-  } catch (_err) {
+  } catch {
     showToast(`Failed to copy ${label}`, "error");
   }
 }
 
 // Format time
-function formatTime(isoString) {
+function formatTime(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -142,11 +159,20 @@ function formatTime(isoString) {
   });
 }
 
+// Escape HTML to prevent XSS
+function escapeHtml(str: string): string {
+  const div = document.createElement("div");
+  div.textContent = str;
+  return div.innerHTML;
+}
+
 // Render events
-async function renderEvents(events) {
-  const tbody = document.getElementById("events-body");
+async function renderEvents(events: EventResponse[]): Promise<void> {
+  const tbody = document.getElementById("events-body") as HTMLTableSectionElement | null;
   const table = document.getElementById("events-table");
   const emptyState = document.getElementById("empty-state");
+
+  if (!tbody || !table || !emptyState) return;
 
   if (events.length === 0) {
     table.classList.add("hidden");
@@ -221,15 +247,23 @@ async function renderEvents(events) {
     .join("");
 
   // Event listeners for copy buttons
-  tbody.querySelectorAll(".copy-btn").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      const button = e.target.closest(".copy-btn");
+  for (const btn of Array.from(tbody.querySelectorAll(".copy-btn"))) {
+    btn.addEventListener("click", async (e: Event) => {
+      const target = e.target as HTMLElement;
+      const button = target.closest(".copy-btn") as HTMLButtonElement | null;
+      if (!button) return;
+
       const command = button.dataset.command;
+      if (!command) return;
+
       await copyToClipboard(command, "tmux command");
 
       // Mark as copied
       const row = button.closest("tr");
+      if (!row) return;
+
       const eventId = row.dataset.eventId;
+      if (!eventId) return;
 
       if (!button.classList.contains("copied")) {
         button.classList.add("copied");
@@ -244,14 +278,20 @@ async function renderEvents(events) {
         row.classList.add("read");
       }
     });
-  });
+  }
 
   // Event listeners for end session buttons
-  tbody.querySelectorAll(".end-session-btn").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      const button = e.target.closest(".end-session-btn");
+  for (const btn of Array.from(tbody.querySelectorAll(".end-session-btn"))) {
+    btn.addEventListener("click", async (e: Event) => {
+      const target = e.target as HTMLElement;
+      const button = target.closest(".end-session-btn") as HTMLButtonElement | null;
+      if (!button) return;
+
       const sessionId = button.dataset.sessionId;
-      const row = button.closest("tr");
+      if (!sessionId) return;
+
+      const row = button.closest("tr") as HTMLTableRowElement | null;
+      if (!row) return;
 
       // Add fade-out animation
       row.style.transition = "opacity 0.3s";
@@ -273,19 +313,15 @@ async function renderEvents(events) {
 
       await deleteSession(sessionId);
     });
-  });
-}
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
+  }
 }
 
 // Connection status
-function setConnectionStatus(status) {
+function setConnectionStatus(status: ConnectionStatus): void {
   const indicator = document.getElementById("connection-status");
   const text = document.getElementById("connection-text");
+
+  if (!indicator || !text) return;
 
   indicator.className = `status-indicator ${status}`;
   switch (status) {
@@ -302,11 +338,11 @@ function setConnectionStatus(status) {
 }
 
 // SSE connection
-let eventSource = null;
-let reconnectTimer = null;
-let pollTimer = null;
+let eventSource: EventSource | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let pollTimer: ReturnType<typeof setInterval> | null = null;
 
-function connectSSE() {
+function connectSSE(): void {
   if (eventSource) {
     eventSource.close();
   }
@@ -323,7 +359,7 @@ function connectSSE() {
 
   eventSource.onmessage = (event) => {
     try {
-      const data = JSON.parse(event.data);
+      const data: EventsApiResponse = JSON.parse(event.data);
       renderEvents(data.events);
     } catch (err) {
       console.error("Failed to parse event data:", err);
@@ -332,8 +368,10 @@ function connectSSE() {
 
   eventSource.onerror = () => {
     setConnectionStatus("disconnected");
-    eventSource.close();
-    eventSource = null;
+    if (eventSource) {
+      eventSource.close();
+      eventSource = null;
+    }
 
     // Fallback to polling
     if (!pollTimer) {
@@ -352,11 +390,11 @@ function connectSSE() {
   };
 }
 
-async function pollEvents() {
+async function pollEvents(): Promise<void> {
   try {
     const response = await fetch(`/api/events?mode=${currentMode}`);
     if (response.ok) {
-      const data = await response.json();
+      const data: EventsApiResponse = await response.json();
       renderEvents(data.events);
     }
   } catch (err) {
@@ -365,17 +403,25 @@ async function pollEvents() {
 }
 
 // Initialize
-async function init() {
+async function init(): Promise<void> {
   await initDb();
   initModeFromUrl();
 
   // Set up filter toggle handlers
-  document.getElementById("mode-waiting").addEventListener("click", () => {
-    setFilterMode("waiting");
-  });
-  document.getElementById("mode-active").addEventListener("click", () => {
-    setFilterMode("active");
-  });
+  const modeWaiting = document.getElementById("mode-waiting");
+  const modeActive = document.getElementById("mode-active");
+
+  if (modeWaiting) {
+    modeWaiting.addEventListener("click", () => {
+      setFilterMode("waiting");
+    });
+  }
+
+  if (modeActive) {
+    modeActive.addEventListener("click", () => {
+      setFilterMode("active");
+    });
+  }
 
   connectSSE();
 }

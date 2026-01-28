@@ -23,7 +23,8 @@ bun run type-coverage  # Check type coverage (95% minimum)
 ```bash
 cd plugins/claude-monitoring && bun test                        # Run tests
 cd plugins/claude-monitoring && bun test --watch                # Watch mode
-cd plugins/claude-monitoring/web && bun --watch run server.ts   # Dev server
+cd plugins/claude-monitoring/web && bun run start               # Start server
+cd plugins/claude-monitoring/web && bun run dev                 # Dev server (TS watch + server)
 bun run plugins/claude-monitoring/src/cli.ts <command>          # CLI execution
 ```
 
@@ -39,7 +40,7 @@ bun run plugins/claude-monitoring/src/cli.ts <command>          # CLI execution
 - **Biome**: Linting and formatting (see `biome.json`)
 - **TypeScript**: Strict mode with 95% type coverage minimum
 - **Knip**: Dead code detection for unused exports/dependencies
-- **Pre-commit**: 9 automated checks on commit (see `.pre-commit-config.yaml`)
+- **Pre-commit**: 11 automated checks on commit (see `.pre-commit-config.yaml`)
 
 ## Worktree Automation
 
