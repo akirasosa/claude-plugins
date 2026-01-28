@@ -247,6 +247,99 @@ describe("process tracking", () => {
   });
 });
 
+describe("deleteSession simulation", () => {
+  let db: Database;
+
+  afterEach(() => {
+    if (db) {
+      db.close();
+    }
+  });
+
+  it("should delete all events for a session", () => {
+    db = createTestDatabase();
+
+    // Create two sessions
+    seedSessionEvents(db, "session-to-delete", [
+      { type: "SessionStart", minutesAgo: 10 },
+      { type: "Stop", minutesAgo: 5 },
+      { type: "Notification", minutesAgo: 2 },
+    ]);
+
+    seedSessionEvents(db, "session-to-keep", [
+      { type: "SessionStart", minutesAgo: 8 },
+      { type: "Stop", minutesAgo: 3 },
+    ]);
+
+    // Verify both sessions exist
+    const allEventsBefore = getAllEvents(db);
+    expect(allEventsBefore.length).toBe(5);
+
+    // Delete one session
+    const result = db.prepare("DELETE FROM events WHERE session_id = ?").run("session-to-delete");
+
+    expect(result.changes).toBe(3);
+
+    // Verify only session-to-keep remains
+    const allEventsAfter = getAllEvents(db) as Array<{ session_id: string }>;
+    expect(allEventsAfter.length).toBe(2);
+    for (const event of allEventsAfter) {
+      expect(event.session_id).toBe("session-to-keep");
+    }
+  });
+
+  it("should return 0 changes for non-existent session", () => {
+    db = createTestDatabase();
+
+    seedSessionEvents(db, "existing-session", [
+      { type: "SessionStart", minutesAgo: 10 },
+      { type: "Stop", minutesAgo: 5 },
+    ]);
+
+    const result = db
+      .prepare("DELETE FROM events WHERE session_id = ?")
+      .run("non-existent-session");
+
+    expect(result.changes).toBe(0);
+
+    // Verify existing session is unchanged
+    const allEvents = getAllEvents(db);
+    expect(allEvents.length).toBe(2);
+  });
+
+  it("should not affect other sessions when deleting", () => {
+    db = createTestDatabase();
+
+    // Create three sessions
+    seedSessionEvents(db, "session-1", [
+      { type: "SessionStart", minutesAgo: 15 },
+      { type: "Stop", minutesAgo: 12 },
+    ]);
+
+    seedSessionEvents(db, "session-2", [
+      { type: "SessionStart", minutesAgo: 10 },
+      { type: "Stop", minutesAgo: 7 },
+    ]);
+
+    seedSessionEvents(db, "session-3", [
+      { type: "SessionStart", minutesAgo: 5 },
+      { type: "Stop", minutesAgo: 2 },
+    ]);
+
+    // Delete middle session
+    db.prepare("DELETE FROM events WHERE session_id = ?").run("session-2");
+
+    // Verify other sessions are intact
+    const remainingEvents = getAllEvents(db) as Array<{ session_id: string }>;
+    expect(remainingEvents.length).toBe(4);
+
+    const sessionIds = new Set(remainingEvents.map((e) => e.session_id));
+    expect(sessionIds.has("session-1")).toBe(true);
+    expect(sessionIds.has("session-2")).toBe(false);
+    expect(sessionIds.has("session-3")).toBe(true);
+  });
+});
+
 describe("database queries (simulated)", () => {
   let db: Database;
 
