@@ -2,8 +2,9 @@
 .serena/
 node_modules/
 
-# Generated frontend bundle
+# Generated frontend bundles
 plugins/claude-monitoring/web/public/app.js
+plugins/claude-monitoring/web/public/style.css
 
 # Claude Code - ignore user-specific files but track shared config
 .claude/*
