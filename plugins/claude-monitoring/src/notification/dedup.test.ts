@@ -2,14 +2,14 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { shouldNotifyStop } from "./dedup";
+import { shouldNotify } from "./dedup";
 
 describe("dedup", () => {
   // Track state files created during tests for cleanup
   const createdStateFiles: string[] = [];
 
   function getStateFilePath(sessionId: string): string {
-    return join(tmpdir(), `claude-monitoring-last-stop-${sessionId}`);
+    return join(tmpdir(), `claude-monitoring-last-notify-${sessionId}`);
   }
 
   function createStateFile(sessionId: string, timestamp: number): void {
@@ -28,12 +28,12 @@ describe("dedup", () => {
     createdStateFiles.length = 0;
   });
 
-  describe("shouldNotifyStop", () => {
+  describe("shouldNotify", () => {
     it("should return true for first notification (no state file)", () => {
       const sessionId = `test-${Date.now()}-first`;
       createdStateFiles.push(getStateFilePath(sessionId));
 
-      const result = shouldNotifyStop(sessionId);
+      const result = shouldNotify(sessionId);
 
       expect(result).toBe(true);
     });
@@ -45,7 +45,7 @@ describe("dedup", () => {
 
       expect(existsSync(statePath)).toBe(false);
 
-      shouldNotifyStop(sessionId);
+      shouldNotify(sessionId);
 
       expect(existsSync(statePath)).toBe(true);
     });
@@ -55,11 +55,11 @@ describe("dedup", () => {
       createdStateFiles.push(getStateFilePath(sessionId));
 
       // First call - should return true
-      const first = shouldNotifyStop(sessionId);
+      const first = shouldNotify(sessionId);
       expect(first).toBe(true);
 
       // Immediate second call - should return false (within 30 second window)
-      const second = shouldNotifyStop(sessionId);
+      const second = shouldNotify(sessionId);
       expect(second).toBe(false);
     });
 
@@ -72,7 +72,7 @@ describe("dedup", () => {
       const oldTimestamp = Date.now() - 31 * 1000;
       createStateFile(sessionId, oldTimestamp);
 
-      const result = shouldNotifyStop(sessionId);
+      const result = shouldNotify(sessionId);
 
       expect(result).toBe(true);
     });
@@ -86,7 +86,7 @@ describe("dedup", () => {
       const recentTimestamp = Date.now() - 15 * 1000;
       createStateFile(sessionId, recentTimestamp);
 
-      const result = shouldNotifyStop(sessionId);
+      const result = shouldNotify(sessionId);
 
       expect(result).toBe(false);
     });
@@ -102,7 +102,7 @@ describe("dedup", () => {
 
       // At exactly 30 seconds, window has elapsed (< 30000 is false)
       // so notification should happen
-      const result = shouldNotifyStop(sessionId);
+      const result = shouldNotify(sessionId);
       expect(result).toBe(true);
     });
 
@@ -115,7 +115,7 @@ describe("dedup", () => {
       writeFileSync(statePath, "not-a-number");
 
       // Should proceed with notification when timestamp is invalid
-      const result = shouldNotifyStop(sessionId);
+      const result = shouldNotify(sessionId);
       expect(result).toBe(true);
     });
 
@@ -129,11 +129,11 @@ describe("dedup", () => {
       createStateFile(sessionId, oldTimestamp);
 
       // Should return true and update timestamp
-      const result = shouldNotifyStop(sessionId);
+      const result = shouldNotify(sessionId);
       expect(result).toBe(true);
 
       // Immediately call again - should return false (timestamp was updated)
-      const secondResult = shouldNotifyStop(sessionId);
+      const secondResult = shouldNotify(sessionId);
       expect(secondResult).toBe(false);
     });
 
@@ -144,15 +144,15 @@ describe("dedup", () => {
       createdStateFiles.push(getStateFilePath(sessionId2));
 
       // First session notification
-      const result1 = shouldNotifyStop(sessionId1);
+      const result1 = shouldNotify(sessionId1);
       expect(result1).toBe(true);
 
       // Different session should still return true
-      const result2 = shouldNotifyStop(sessionId2);
+      const result2 = shouldNotify(sessionId2);
       expect(result2).toBe(true);
 
       // First session again should return false
-      const result1Again = shouldNotifyStop(sessionId1);
+      const result1Again = shouldNotify(sessionId1);
       expect(result1Again).toBe(false);
     });
   });

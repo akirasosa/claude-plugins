@@ -1,9 +1,9 @@
-import { shouldNotifyStop } from "./dedup";
+import { shouldNotify } from "./dedup";
 import { generateSummary } from "./gemini";
 import { showNotification } from "./platform-notify";
 
 export { getGcpLocation, getGcpProject } from "./config";
-export { shouldNotifyStop } from "./dedup";
+export { shouldNotify } from "./dedup";
 export { generateSummary } from "./gemini";
 export { showNotification } from "./platform-notify";
 
@@ -14,6 +14,14 @@ export interface NotificationInput {
   cwd?: string;
   transcript_path?: string;
   reason?: string;
+  // Notification-specific fields (from Claude Code hooks)
+  notification_type?: string; // permission_prompt, idle_prompt, auth_success, elicitation_dialog
+  message?: string;
+  // Stop-specific fields
+  stop_hook_active?: boolean;
+  // Common hook fields
+  hook_event_name?: string;
+  permission_mode?: string;
 }
 
 export interface HandleEventResult {
@@ -38,9 +46,9 @@ async function handleStop(
   // Always log to DB
   logToDb("Stop", displaySummary);
 
-  // Only show notification if not a consecutive Stop
+  // Only show notification if not recently notified
   let notificationShown = false;
-  if (shouldNotifyStop(sessionId)) {
+  if (shouldNotify(sessionId)) {
     await showNotification("Claude Code", `[Stop] ${displaySummary}`);
     notificationShown = true;
   }
@@ -60,17 +68,30 @@ async function handleNotification(
   logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   const transcriptPath = input.transcript_path || "";
+  const sessionId = input.session_id || "";
+  const notificationType = input.notification_type || "unknown";
 
   const summary = await generateSummary(transcriptPath, "notification");
   const displaySummary = summary || "Waiting for input";
 
-  await showNotification("Claude Code", `[Notification] ${displaySummary}`);
-  logToDb("Notification", displaySummary);
+  // Include notification type in the event type for better tracking
+  // notification_type can be: idle_prompt, permission_prompt, elicitation_dialog, auth_success
+  const eventType = `Notification:${notificationType}`;
+
+  // Always log to DB
+  logToDb(eventType, displaySummary);
+
+  // Only show notification if not recently notified
+  let notificationShown = false;
+  if (shouldNotify(sessionId)) {
+    await showNotification("Claude Code", `[${notificationType}] ${displaySummary}`);
+    notificationShown = true;
+  }
 
   return {
-    eventType: "Notification",
+    eventType,
     summary: displaySummary,
-    notificationShown: true,
+    notificationShown,
   };
 }
 
