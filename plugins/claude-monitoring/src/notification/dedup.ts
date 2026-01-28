@@ -5,15 +5,15 @@ import { join } from "node:path";
 const STOP_DEDUP_INTERVAL_MS = 30 * 1000; // 30 seconds
 
 function getStateFilePath(sessionId: string): string {
-  return join(tmpdir(), `claude-monitoring-last-stop-${sessionId}`);
+  return join(tmpdir(), `claude-monitoring-last-notify-${sessionId}`);
 }
 
 /**
- * Check if a stop notification should be shown.
- * Returns false if a stop notification was shown for the same session within 30 seconds.
+ * Check if a notification should be shown.
+ * Returns false if a notification was shown for the same session within 30 seconds.
  * Updates the state file with the current timestamp if returning true.
  */
-export function shouldNotifyStop(sessionId: string): boolean {
+export function shouldNotify(sessionId: string): boolean {
   const stateFile = getStateFilePath(sessionId);
   const now = Date.now();
 
