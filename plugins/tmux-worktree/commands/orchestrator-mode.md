@@ -46,7 +46,6 @@ When the user describes what they want to accomplish:
    - **Relevant files**: Files to modify or reference
    - **Decisions made**: What has already been decided
    - **Expected output**: Deliverable format (PR, docs, etc.)
-   - **Reporting completion**: How to notify the orchestrator after PR creation
 
 ### What to Delegate
 
@@ -63,25 +62,11 @@ Delegate **any task** where the theme is identifiable:
 ```bash
 ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan <branch> "<handoff prompt>"
 
-# Implementation example with completion notification
-${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/add-auth "## Objective
-Add user authentication to the API endpoints.
+# Implementation examples
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/add-auth "Objective: Add user authentication..."
+${CLAUDE_PLUGIN_ROOT}/scripts/start --plan fix/login-bug "Objective: Fix the login timeout issue..."
 
-## Context
-Users need to log in before accessing protected resources.
-
-## Expected output
-Create a PR with the implementation.
-
-## Reporting completion
-After creating the PR, notify the orchestrator:
-\`\`\`bash
-tmux send-keys -t 1 Escape && sleep 1 && tmux send-keys -t 1 'PR created for feat/add-auth. Ready for review.' Enter
-\`\`\`
-Note: Escape exits INSERT mode, sleep ensures timing, then send the message.
-"
-
-# Research example
+# Research examples
 ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan research/skill-visibility "Objective: Research why plugin skills don't appear in slash commands. Search the web thoroughly, check Claude Code documentation, and compile findings..."
 ```
 
@@ -89,7 +74,7 @@ This creates a worktree, opens a new tmux window, and starts Claude Code in plan
 
 ## Phase 2: PR Review and Merge
 
-When notified that a PR is ready (via worker notification or user):
+When the user returns saying a PR is ready:
 
 1. **List open PRs**
    ```bash
@@ -155,4 +140,3 @@ This automatically cleans up the tmux window via the preRemove hook.
 - The orchestrator session stays on the main branch
 - **Delegate research tasks too**—don't execute WebSearch or exploration yourself
 - **If the topic is clear, delegate first**; let the worker ask clarifying questions
-- **Workers should notify the orchestrator** after creating PR using `tmux send-keys -t 1`
