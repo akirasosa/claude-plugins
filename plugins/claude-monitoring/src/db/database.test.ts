@@ -340,6 +340,126 @@ describe("deleteSession simulation", () => {
   });
 });
 
+describe("getActiveEvents all mode (simulated)", () => {
+  let db: Database;
+
+  afterEach(() => {
+    if (db) {
+      db.close();
+    }
+  });
+
+  it("should include ended sessions in 'all' mode", () => {
+    db = createTestDatabase();
+
+    // Session with SessionEnd
+    seedSessionEvents(db, "ended-session", [
+      { type: "SessionStart", minutesAgo: 10 },
+      { type: "Stop", minutesAgo: 5 },
+      { type: "SessionEnd", minutesAgo: 1 },
+    ]);
+
+    // Session still active
+    seedSessionEvents(db, "active-session", [
+      { type: "SessionStart", minutesAgo: 8 },
+      { type: "Stop", minutesAgo: 3 },
+    ]);
+
+    // Simulate 'all' mode query (no SessionEnd exclusion)
+    const queryAll = `
+      SELECT *
+      FROM events e1
+      WHERE created_at = (
+        SELECT MAX(created_at) FROM events e2
+        WHERE e2.session_id = e1.session_id
+      )
+      ORDER BY created_at DESC
+    `;
+
+    const eventsAll = db.query(queryAll).all() as Array<{ session_id: string; event_type: string }>;
+
+    // Both sessions should be returned
+    expect(eventsAll.length).toBe(2);
+
+    const sessionIds = eventsAll.map((e) => e.session_id);
+    expect(sessionIds).toContain("ended-session");
+    expect(sessionIds).toContain("active-session");
+
+    // The ended session should show SessionEnd as latest event
+    const endedSession = eventsAll.find((e) => e.session_id === "ended-session");
+    expect(endedSession?.event_type).toBe("SessionEnd");
+  });
+});
+
+describe("bulk delete simulation", () => {
+  let db: Database;
+
+  afterEach(() => {
+    if (db) {
+      db.close();
+    }
+  });
+
+  it("should delete multiple sessions with IN clause", () => {
+    db = createTestDatabase();
+
+    // Create three sessions
+    seedSessionEvents(db, "session-1", [
+      { type: "SessionStart", minutesAgo: 15 },
+      { type: "Stop", minutesAgo: 12 },
+    ]);
+
+    seedSessionEvents(db, "session-2", [
+      { type: "SessionStart", minutesAgo: 10 },
+      { type: "Stop", minutesAgo: 7 },
+    ]);
+
+    seedSessionEvents(db, "session-3", [
+      { type: "SessionStart", minutesAgo: 5 },
+      { type: "Stop", minutesAgo: 2 },
+    ]);
+
+    // Verify all sessions exist
+    expect(getAllEvents(db).length).toBe(6);
+
+    // Bulk delete sessions 1 and 2
+    const sessionIdsToDelete = ["session-1", "session-2"];
+    const placeholders = sessionIdsToDelete.map(() => "?").join(",");
+    const result = db
+      .prepare(`DELETE FROM events WHERE session_id IN (${placeholders})`)
+      .run(...sessionIdsToDelete);
+
+    expect(result.changes).toBe(4); // 2 events per session * 2 sessions
+
+    // Verify only session-3 remains
+    const remainingEvents = getAllEvents(db) as Array<{ session_id: string }>;
+    expect(remainingEvents.length).toBe(2);
+    for (const event of remainingEvents) {
+      expect(event.session_id).toBe("session-3");
+    }
+  });
+
+  it("should handle empty session list gracefully", () => {
+    db = createTestDatabase();
+
+    seedSessionEvents(db, "session-1", [
+      { type: "SessionStart", minutesAgo: 10 },
+      { type: "Stop", minutesAgo: 5 },
+    ]);
+
+    // No sessions to delete - this would be handled at application level
+    // but we can verify the query structure is correct with a single placeholder
+    const result = db
+      .prepare("DELETE FROM events WHERE session_id IN (?)")
+      .run("non-existent-session");
+
+    expect(result.changes).toBe(0);
+
+    // Original session remains
+    expect(getAllEvents(db).length).toBe(2);
+  });
+});
+
 describe("database queries (simulated)", () => {
   let db: Database;
 

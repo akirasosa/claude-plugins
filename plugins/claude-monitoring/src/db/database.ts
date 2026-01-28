@@ -36,6 +36,23 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
   try {
     const eventTypeFilter = mode === "waiting" ? "AND event_type IN ('Stop', 'Notification')" : "";
 
+    // For "all" mode, don't exclude ended sessions
+    const excludeEndedFilter =
+      mode === "all"
+        ? ""
+        : `
+      AND NOT EXISTS (
+        SELECT 1 FROM events e3
+        WHERE e3.session_id = e1.session_id
+        AND e3.event_type = 'SessionEnd'
+        AND e3.created_at > (
+          SELECT COALESCE(MAX(created_at), '') FROM events e4
+          WHERE e4.session_id = e1.session_id
+          AND e4.event_type = 'SessionStart'
+        )
+      )
+    `;
+
     const query = `
       SELECT
         id,
@@ -54,16 +71,7 @@ export function getActiveEvents(mode: FilterMode = "waiting"): EventResponse[] {
         WHERE e2.session_id = e1.session_id
       )
       ${eventTypeFilter}
-      AND NOT EXISTS (
-        SELECT 1 FROM events e3
-        WHERE e3.session_id = e1.session_id
-        AND e3.event_type = 'SessionEnd'
-        AND e3.created_at > (
-          SELECT COALESCE(MAX(created_at), '') FROM events e4
-          WHERE e4.session_id = e1.session_id
-          AND e4.event_type = 'SessionStart'
-        )
-      )
+      ${excludeEndedFilter}
       ORDER BY created_at DESC
     `;
 
@@ -238,4 +246,79 @@ export function getSessionStatus(sessionId: string): SessionStatus {
     process_pid: pid,
     process_running: pid ? checkProcessExists(pid) : false,
   };
+}
+
+export interface CleanupCandidate {
+  session_id: string;
+  project_name: string | null;
+}
+
+export function getCleanupCandidates(): CleanupCandidate[] {
+  if (!dbExists()) {
+    return [];
+  }
+
+  const db = getDb(true);
+  try {
+    // Get all distinct sessions with their project_name
+    const query = `
+      SELECT DISTINCT
+        e1.session_id,
+        e1.project_name,
+        e1.project_dir
+      FROM events e1
+      WHERE e1.created_at = (
+        SELECT MAX(e2.created_at) FROM events e2
+        WHERE e2.session_id = e1.session_id
+      )
+    `;
+
+    const rows = db.query(query).all() as Array<{
+      session_id: string;
+      project_name: string | null;
+      project_dir: string | null;
+    }>;
+
+    // Filter by sessions where process is NOT running
+    return rows
+      .filter((row) => {
+        const status = getSessionStatus(row.session_id);
+        return !status.process_running;
+      })
+      .map((row) => ({
+        session_id: row.session_id,
+        project_name: row.project_name || (row.project_dir ? basename(row.project_dir) : null),
+      }));
+  } finally {
+    db.close();
+  }
+}
+
+export interface BulkCleanupResult {
+  deleted_count: number;
+}
+
+export function cleanupDeadSessions(): BulkCleanupResult {
+  if (!dbExists()) {
+    return { deleted_count: 0 };
+  }
+
+  const candidates = getCleanupCandidates();
+  if (candidates.length === 0) {
+    return { deleted_count: 0 };
+  }
+
+  const db = getDb();
+  try {
+    const sessionIds = candidates.map((c) => c.session_id);
+    const placeholders = sessionIds.map(() => "?").join(",");
+    db.prepare(`DELETE FROM events WHERE session_id IN (${placeholders})`).run(...sessionIds);
+
+    return { deleted_count: candidates.length };
+  } catch (err) {
+    console.error("Failed to cleanup dead sessions:", err);
+    return { deleted_count: 0 };
+  } finally {
+    db.close();
+  }
 }

@@ -1,4 +1,6 @@
 import type {
+  CleanupPreviewResponse,
+  CleanupResponse,
   ConnectionStatus,
   EventResponse,
   EventsApiResponse,
@@ -11,7 +13,12 @@ let currentMode: FilterMode = "waiting";
 
 function initModeFromUrl(): void {
   const params = new URLSearchParams(window.location.search);
-  currentMode = params.get("mode") === "active" ? "active" : "waiting";
+  const mode = params.get("mode");
+  if (mode === "active" || mode === "all") {
+    currentMode = mode;
+  } else {
+    currentMode = "waiting";
+  }
   updateToggleUI(currentMode);
 }
 
@@ -28,14 +35,19 @@ function updateUrlWithMode(mode: FilterMode): void {
 function updateToggleUI(mode: FilterMode): void {
   const waitingBtn = document.getElementById("mode-waiting");
   const activeBtn = document.getElementById("mode-active");
-  if (!waitingBtn || !activeBtn) return;
+  const allBtn = document.getElementById("mode-all");
+  if (!waitingBtn || !activeBtn || !allBtn) return;
+
+  waitingBtn.classList.remove("active");
+  activeBtn.classList.remove("active");
+  allBtn.classList.remove("active");
 
   if (mode === "waiting") {
     waitingBtn.classList.add("active");
-    activeBtn.classList.remove("active");
-  } else {
-    waitingBtn.classList.remove("active");
+  } else if (mode === "active") {
     activeBtn.classList.add("active");
+  } else {
+    allBtn.classList.add("active");
   }
 }
 
@@ -402,6 +414,61 @@ async function pollEvents(): Promise<void> {
   }
 }
 
+// Cleanup functionality
+async function getCleanupPreview(): Promise<CleanupPreviewResponse> {
+  try {
+    const response = await fetch("/api/cleanup/preview");
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.error("Failed to get cleanup preview:", err);
+  }
+  return { count: 0, sessions: [] };
+}
+
+async function performCleanup(): Promise<CleanupResponse> {
+  try {
+    const response = await fetch("/api/cleanup", { method: "POST" });
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (err) {
+    console.error("Failed to perform cleanup:", err);
+  }
+  return { deleted_count: 0 };
+}
+
+function showCleanupModal(preview: CleanupPreviewResponse): void {
+  const modal = document.getElementById("cleanup-modal");
+  const countEl = document.getElementById("cleanup-count");
+  const listEl = document.getElementById("cleanup-list");
+
+  if (!modal || !countEl || !listEl) return;
+
+  if (preview.count === 0) {
+    showToast("No dead sessions to cleanup");
+    return;
+  }
+
+  countEl.textContent = `${preview.count} session${preview.count !== 1 ? "s" : ""} will be deleted.`;
+  listEl.innerHTML = preview.sessions
+    .map(
+      (s) =>
+        `<li>${escapeHtml(s.project_name || "unknown")} <span class="session-id">(${escapeHtml(s.session_id.substring(0, 8))})</span></li>`,
+    )
+    .join("");
+
+  modal.classList.remove("hidden");
+}
+
+function hideCleanupModal(): void {
+  const modal = document.getElementById("cleanup-modal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
+}
+
 // Initialize
 async function init(): Promise<void> {
   await initDb();
@@ -410,6 +477,7 @@ async function init(): Promise<void> {
   // Set up filter toggle handlers
   const modeWaiting = document.getElementById("mode-waiting");
   const modeActive = document.getElementById("mode-active");
+  const modeAll = document.getElementById("mode-all");
 
   if (modeWaiting) {
     modeWaiting.addEventListener("click", () => {
@@ -420,6 +488,54 @@ async function init(): Promise<void> {
   if (modeActive) {
     modeActive.addEventListener("click", () => {
       setFilterMode("active");
+    });
+  }
+
+  if (modeAll) {
+    modeAll.addEventListener("click", () => {
+      setFilterMode("all");
+    });
+  }
+
+  // Set up cleanup handlers
+  const cleanupBtn = document.getElementById("cleanup-btn");
+  const cleanupCancel = document.getElementById("cleanup-cancel");
+  const cleanupConfirm = document.getElementById("cleanup-confirm");
+  const cleanupModal = document.getElementById("cleanup-modal");
+
+  if (cleanupBtn) {
+    cleanupBtn.addEventListener("click", async () => {
+      const preview = await getCleanupPreview();
+      showCleanupModal(preview);
+    });
+  }
+
+  if (cleanupCancel) {
+    cleanupCancel.addEventListener("click", () => {
+      hideCleanupModal();
+    });
+  }
+
+  if (cleanupConfirm) {
+    cleanupConfirm.addEventListener("click", async () => {
+      hideCleanupModal();
+      const result = await performCleanup();
+      if (result.deleted_count > 0) {
+        showToast(
+          `Deleted ${result.deleted_count} session${result.deleted_count !== 1 ? "s" : ""}`,
+        );
+      } else {
+        showToast("No sessions were deleted", "error");
+      }
+    });
+  }
+
+  // Close modal when clicking outside
+  if (cleanupModal) {
+    cleanupModal.addEventListener("click", (e) => {
+      if (e.target === cleanupModal) {
+        hideCleanupModal();
+      }
     });
   }
 

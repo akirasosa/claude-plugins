@@ -6,10 +6,14 @@ export { type CleanupResult, cleanup } from "./cleanup";
 export { DB_DIR, DB_FILE, RETENTION_DAYS } from "./config";
 // Database operations
 export {
+  type BulkCleanupResult,
+  type CleanupCandidate,
+  cleanupDeadSessions,
   dbExists,
   deleteSession,
   ensureDbDir,
   getActiveEvents,
+  getCleanupCandidates,
   getDb,
   getDbLastModified,
   getDbPath,

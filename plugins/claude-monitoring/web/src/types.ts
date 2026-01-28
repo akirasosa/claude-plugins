@@ -14,7 +14,7 @@ export interface EventResponse {
   tmux_window_id: string | null;
 }
 
-export type FilterMode = "waiting" | "active";
+export type FilterMode = "waiting" | "active" | "all";
 
 export type ConnectionStatus = "connected" | "polling" | "disconnected";
 
@@ -27,4 +27,18 @@ export interface SessionStatusResponse {
 export interface EventsApiResponse {
   events: EventResponse[];
   last_modified: number;
+}
+
+export interface CleanupCandidate {
+  session_id: string;
+  project_name: string | null;
+}
+
+export interface CleanupPreviewResponse {
+  count: number;
+  sessions: CleanupCandidate[];
+}
+
+export interface CleanupResponse {
+  deleted_count: number;
 }

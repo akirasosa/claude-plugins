@@ -24,7 +24,7 @@ export interface EventResponse {
   tmux_window_id: string | null;
 }
 
-export type FilterMode = "waiting" | "active";
+export type FilterMode = "waiting" | "active" | "all";
 
 export interface EventInput {
   session_id?: string;
