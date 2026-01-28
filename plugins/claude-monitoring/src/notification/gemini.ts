@@ -52,8 +52,12 @@ function readTranscriptTail(transcriptPath: string): string | null {
  * Build the prompt for Gemini based on event type
  */
 function buildPrompt(transcriptTail: string, eventType: string): string {
+  const languageInstruction = `IMPORTANT: Analyze the user's messages in this transcript to determine what language they are using. Your response MUST be in the same language as the user's messages.
+
+`;
+
   if (eventType === "notification") {
-    return `The following is the end of Claude Code's transcript (JSONL format).
+    return `${languageInstruction}The following is the end of Claude Code's transcript (JSONL format).
 Claude is waiting for user input. Look for "AskUserQuestion" tool_use to understand what is being asked.
 Summarize what question or input Claude is waiting for in 15 words or less.
 Examples: "Asking which database to use", "Waiting for confirmation to proceed"
@@ -62,7 +66,7 @@ Output only the summary.
 ${transcriptTail}`;
   }
 
-  return `The following is the end of Claude Code's transcript (JSONL format).
+  return `${languageInstruction}The following is the end of Claude Code's transcript (JSONL format).
 Summarize what was completed or accomplished in 15 words or less.
 Examples: "Fixed login bug", "Created PR for feature X", "Refactored auth module"
 Output only the summary.
