@@ -550,6 +550,86 @@ describe("database queries (simulated)", () => {
       expect(events.length).toBe(1);
       expect(events[0].session_id).toBe("active-session");
     });
+
+    it("should include Notification:* event types in waiting mode", () => {
+      db = createTestDatabase();
+
+      // Session with Notification:idle_prompt
+      seedSessionEvents(db, "session-1", [
+        { type: "SessionStart", minutesAgo: 10 },
+        { type: "Notification:idle_prompt", minutesAgo: 5, summary: "Idle prompt" },
+      ]);
+
+      // Session with Notification:permission_prompt
+      seedSessionEvents(db, "session-2", [
+        { type: "SessionStart", minutesAgo: 8 },
+        { type: "Notification:permission_prompt", minutesAgo: 3, summary: "Permission prompt" },
+      ]);
+
+      // Session with plain Notification
+      seedSessionEvents(db, "session-3", [
+        { type: "SessionStart", minutesAgo: 6 },
+        { type: "Notification", minutesAgo: 1, summary: "Plain notification" },
+      ]);
+
+      // Simulate updated getActiveEvents query (waiting mode with LIKE)
+      const query = `
+        SELECT *
+        FROM events e1
+        WHERE e1.session_id != ''
+        AND created_at = (
+          SELECT MAX(created_at) FROM events e2
+          WHERE e2.session_id = e1.session_id
+        )
+        AND (event_type = 'Stop' OR event_type LIKE 'Notification%')
+        ORDER BY created_at DESC
+      `;
+
+      const events = db.query(query).all() as Array<{ session_id: string; event_type: string }>;
+
+      expect(events.length).toBe(3);
+      expect(events.map((e) => e.event_type)).toContain("Notification:idle_prompt");
+      expect(events.map((e) => e.event_type)).toContain("Notification:permission_prompt");
+      expect(events.map((e) => e.event_type)).toContain("Notification");
+    });
+
+    it("should exclude events with empty session_id", () => {
+      db = createTestDatabase();
+
+      // Normal session
+      seedSessionEvents(db, "valid-session", [
+        { type: "SessionStart", minutesAgo: 10 },
+        { type: "Stop", minutesAgo: 5 },
+      ]);
+
+      // Insert an event with empty session_id (corrupted data)
+      const eventId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      db.prepare(
+        `INSERT INTO events (
+          event_id, session_id, event_type, created_at, date_part
+        ) VALUES (?, '', 'Notification', ?, ?)`,
+      ).run(eventId, now, now.split("T")[0]);
+
+      // Query with empty session_id filter
+      const query = `
+        SELECT *
+        FROM events e1
+        WHERE e1.session_id != ''
+        AND created_at = (
+          SELECT MAX(created_at) FROM events e2
+          WHERE e2.session_id = e1.session_id
+        )
+        AND (event_type = 'Stop' OR event_type LIKE 'Notification%')
+        ORDER BY created_at DESC
+      `;
+
+      const events = db.query(query).all() as Array<{ session_id: string }>;
+
+      // Should only return the valid session, not the empty one
+      expect(events.length).toBe(1);
+      expect(events[0].session_id).toBe("valid-session");
+    });
   });
 
   describe("recordEvent simulation", () => {
