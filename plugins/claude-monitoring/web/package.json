@@ -5,14 +5,20 @@
   "type": "module",
   "scripts": {
     "postinstall": "bun run build",
-    "build": "bun build ./src/app.ts --outfile ./public/app.js --target browser",
-    "build:watch": "bun build ./src/app.ts --outfile ./public/app.js --target browser --watch",
+    "build": "bun run build:css && bun run build:js",
+    "build:js": "bun build ./src/app.ts --outfile ./public/app.js --target browser",
+    "build:css": "bunx @tailwindcss/cli -i ./src/styles/input.css -o ./public/style.css --minify",
+    "build:watch": "concurrently -k \"bun run build:js:watch\" \"bun run build:css:watch\"",
+    "build:js:watch": "bun build ./src/app.ts --outfile ./public/app.js --target browser --watch",
+    "build:css:watch": "bunx @tailwindcss/cli -i ./src/styles/input.css -o ./public/style.css --watch",
     "start": "bun run server.ts",
-    "dev": "concurrently -k \"bun run build:watch\" \"bun --watch run server.ts\""
+    "dev": "concurrently -k \"bun run build:js:watch\" \"bun run build:css:watch\" \"bun --watch run server.ts\""
   },
   "dependencies": {},
   "devDependencies": {
     "@types/bun": "latest",
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.1.2",
+    "@tailwindcss/cli": "^4.0.0",
+    "tailwindcss": "^4.0.0"
   }
 }
