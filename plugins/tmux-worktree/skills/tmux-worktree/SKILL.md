@@ -1,7 +1,7 @@
 ---
 name: tmux-worktree
 description: Git worktree workflow with tmux integration for parallel Claude Code sessions
-user-invocable: false
+user-invocable: true
 disable-model-invocation: false
 ---
 
