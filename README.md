@@ -34,3 +34,5 @@ claude plugin uninstall <plugin-name>
 # Remove marketplace
 claude plugin marketplace remove akirasosa-claude-plugins
 ```
+
+# Parallel worker 2 test
