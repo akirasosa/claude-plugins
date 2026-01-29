@@ -31,6 +31,7 @@ claude --plugin-dir /path/to/claude-monitoring
 - **Session Tracking**: Monitor active sessions via Web UI
 - **Tmux Integration**: Quick jump to Claude Code sessions running in tmux
 - **Auto Cleanup**: Records older than 30 days are automatically deleted
+- **Inbox System**: Inter-session messaging for orchestrator-worker communication
 
 ## Events Tracked
 
@@ -65,9 +66,35 @@ If neither is configured, the gcloud default project (`gcloud config get-value p
 
 **Note**: Add `claude-monitoring.local.md` to `.gitignore` as it may contain project-specific settings.
 
+## CLI Commands
+
+### Inbox (Orchestrator-Worker Communication)
+
+The inbox system enables communication between orchestrator and worker Claude Code sessions:
+
+```bash
+# Check for unread messages
+bun run src/cli.ts inbox check <session_id>
+
+# Add a message (from worker)
+echo '{"worker_branch":"feat/xxx","pr_url":"..."}' | bun run src/cli.ts inbox add <session_id>
+
+# Mark messages as read
+bun run src/cli.ts inbox mark-read <session_id>
+
+# Clear all messages
+bun run src/cli.ts inbox clear <session_id>
+
+# List all inbox files
+bun run src/cli.ts inbox list
+```
+
+**Note**: The inbox system is primarily used by the `tmux-worktree` plugin's orchestrator mode.
+
 ## Data Storage
 
 - **Database**: `~/.local/share/claude-monitoring/events.db`
+- **Inbox**: `~/.claude/orchestrator-inbox/` (JSON files)
 - **Retention**: 30 days (older records are automatically deleted)
 
 ## Database Schema
