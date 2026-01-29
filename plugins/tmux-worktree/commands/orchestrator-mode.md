@@ -79,8 +79,7 @@ This creates a worktree, opens a new tmux window, and starts Claude Code in plan
 ```
 ---
 **After PR creation**, notify the orchestrator:
-BRANCH=$(git branch --show-current | tr '/' '-')
-mkdir -p <ORCHESTRATOR_DIR>/.claude-inbox && echo '{"worker_branch":"'$BRANCH'","pr_url":"<url>"}' > <ORCHESTRATOR_DIR>/.claude-inbox/$BRANCH.json
+mkdir -p <ORCHESTRATOR_DIR>/.claude-inbox && echo '{"worker_branch":"<branch>","pr_url":"<url>"}' > <ORCHESTRATOR_DIR>/.claude-inbox/$(uuidgen).json
 ---
 ```
 
