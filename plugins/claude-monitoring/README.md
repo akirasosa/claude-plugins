@@ -28,7 +28,7 @@ claude --plugin-dir /path/to/claude-monitoring
 
 - **Event Logging**: Records all Claude Code events to SQLite database
 - **Desktop Notifications**: Alerts when tasks complete or require input
-- **Session Tracking**: Query active sessions with `/event-log` command
+- **Session Tracking**: Monitor active sessions via Web UI
 - **Tmux Integration**: Quick jump to Claude Code sessions running in tmux
 - **Auto Cleanup**: Records older than 30 days are automatically deleted
 
@@ -40,18 +40,6 @@ claude --plugin-dir /path/to/claude-monitoring
 | `Notification` | Yes | Waiting for user input |
 | `SessionStart` | No | Session started |
 | `SessionEnd` | No | Session ended |
-
-## Commands
-
-### /event-log
-
-Show active Claude Code sessions with tmux jump commands.
-
-```
-| Project | Status | Time | Summary | Jump |
-|---------|--------|------|---------|------|
-| dotfiles | Stop | 10:30 | Task completed | `tmux switch-client -t '@42'` |
-```
 
 ## Configuration
 
