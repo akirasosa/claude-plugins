@@ -8,15 +8,6 @@ import {
   migrate,
   recordEvent,
 } from "./db";
-import {
-  addMessage,
-  checkInbox,
-  clearInbox,
-  formatMessages,
-  listInboxFiles,
-  markAllRead,
-  markRead,
-} from "./inbox";
 import { type EventType, handleEvent, type NotificationInput } from "./notification";
 
 const USAGE = `
@@ -31,27 +22,7 @@ Commands:
   notification   Handle Claude Code hook events (stop, notification, sessionstart, sessionend)
                  Usage: echo '{"session_id":"...","cwd":"...","transcript_path":"..."}' | claude-monitoring notification <event_type>
   init           Initialize database (run migrations)
-
-Inbox Commands (orchestrator-worker communication):
-  inbox check <session_id>              Check for unread messages
-  inbox mark-read <session_id> [branch] Mark message(s) as read
-  inbox clear <session_id>              Clear all messages
-  inbox list                            List all inbox files
-  inbox add <session_id>                Add message (stdin: JSON with worker_branch, pr_number, pr_url, summary)
-
   help           Show this help message
-`;
-
-const INBOX_USAGE = `
-Usage: claude-monitoring inbox <subcommand> [args]
-
-Subcommands:
-  check <session_id>              Check for unread messages in orchestrator's inbox
-  mark-read <session_id> [branch] Mark message(s) as read. If branch provided, marks only that message.
-  clear <session_id>              Clear all messages from inbox
-  list                            List all inbox files (orchestrator sessions)
-  add <session_id>                Add a completion message to inbox
-                                  Stdin: JSON with worker_branch, pr_number, pr_url, summary
 `;
 
 async function readStdin(): Promise<string> {
@@ -281,107 +252,6 @@ async function handleNotificationCommand(args: string[]): Promise<void> {
   }
 }
 
-async function handleInboxCommand(args: string[]): Promise<void> {
-  const subcommand = args[0];
-
-  switch (subcommand) {
-    case "check": {
-      const sessionId = args[1];
-      if (!sessionId) {
-        console.error("Error: session_id required");
-        console.log(INBOX_USAGE);
-        process.exit(1);
-      }
-      const result = checkInbox(sessionId);
-      if (result.unread_count === 0) {
-        console.log("No unread messages");
-      } else {
-        console.log(`${result.unread_count} unread message(s):\n`);
-        console.log(formatMessages(result.messages));
-      }
-      break;
-    }
-
-    case "mark-read": {
-      const sessionId = args[1];
-      if (!sessionId) {
-        console.error("Error: session_id required");
-        console.log(INBOX_USAGE);
-        process.exit(1);
-      }
-      const branch = args[2];
-      if (branch) {
-        const marked = markRead(sessionId, branch);
-        console.log(marked ? `Marked ${branch} as read` : `Message for ${branch} not found`);
-      } else {
-        const count = markAllRead(sessionId);
-        console.log(`Marked ${count} message(s) as read`);
-      }
-      break;
-    }
-
-    case "clear": {
-      const sessionId = args[1];
-      if (!sessionId) {
-        console.error("Error: session_id required");
-        console.log(INBOX_USAGE);
-        process.exit(1);
-      }
-      const count = clearInbox(sessionId);
-      console.log(`Cleared ${count} message(s)`);
-      break;
-    }
-
-    case "list": {
-      const files = listInboxFiles();
-      if (files.length === 0) {
-        console.log("No inbox files found");
-      } else {
-        console.log(`Found ${files.length} inbox file(s):`);
-        for (const file of files) {
-          console.log(`  ${file}`);
-        }
-      }
-      break;
-    }
-
-    case "add": {
-      const sessionId = args[1];
-      if (!sessionId) {
-        console.error("Error: session_id required");
-        console.log(INBOX_USAGE);
-        process.exit(1);
-      }
-      const inputJson = await readStdin();
-      let message: { worker_branch: string; pr_number?: number; pr_url?: string; summary?: string };
-      try {
-        message = JSON.parse(inputJson);
-      } catch {
-        console.error("Error: Invalid JSON input");
-        process.exit(1);
-      }
-      if (!message.worker_branch) {
-        console.error("Error: worker_branch required in JSON input");
-        process.exit(1);
-      }
-      addMessage(sessionId, message);
-      console.log(`Added message from ${message.worker_branch} to inbox`);
-      break;
-    }
-
-    case "help":
-    case "--help":
-    case "-h":
-      console.log(INBOX_USAGE);
-      break;
-
-    default:
-      console.error(`Unknown inbox subcommand: ${subcommand}`);
-      console.log(INBOX_USAGE);
-      process.exit(1);
-  }
-}
-
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const command = args[0];
@@ -414,10 +284,6 @@ async function main(): Promise<void> {
     case "init":
       migrate();
       console.log("Database initialized");
-      break;
-
-    case "inbox":
-      await handleInboxCommand(args.slice(1));
       break;
 
     case "help":
