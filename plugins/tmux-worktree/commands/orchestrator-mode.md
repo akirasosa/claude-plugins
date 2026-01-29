@@ -79,7 +79,8 @@ This creates a worktree, opens a new tmux window, and starts Claude Code in plan
 ```
 ---
 **After PR creation**, notify the orchestrator:
-mkdir -p <ORCHESTRATOR_DIR>/.claude-inbox && echo '{"worker_branch":"<branch>","pr_url":"<url>"}' > <ORCHESTRATOR_DIR>/.claude-inbox/notify-$(date +%s).json
+mkdir -p <ORCHESTRATOR_DIR>/.claude-inbox && echo '{"worker_branch":"<branch>","pr_url":"<url>"}' > <ORCHESTRATOR_DIR>/.claude-inbox/<branch>.json
+(Use the branch name as filename to avoid collisions when multiple workers complete simultaneously)
 ---
 ```
 
@@ -87,14 +88,14 @@ mkdir -p <ORCHESTRATOR_DIR>/.claude-inbox && echo '{"worker_branch":"<branch>","
 
 ### Waiting for Notification (Background Subagent)
 
-After starting a worker, launch a Background Subagent to poll for notifications:
+After starting workers, launch a Background Subagent to poll for notifications:
 
 ```
 Task(run_in_background: true, subagent_type: "general-purpose"):
-"Poll .claude-inbox/ every 10 seconds. When a new .json file appears, read and return its content. Poll for up to 10 minutes."
+"Poll .claude-inbox/ every 10 seconds. Read ALL .json files found and return their contents. Delete files after reading to avoid reprocessing. Poll for up to 10 minutes."
 ```
 
-Proceed to Phase 2 when the Background Subagent returns a notification.
+Proceed to Phase 2 when the Background Subagent returns notifications.
 
 ## Phase 2: PR Review and Merge
 
