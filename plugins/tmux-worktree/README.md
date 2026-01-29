@@ -27,7 +27,6 @@ claude plugin install tmux-worktree
 
 - **SessionStart hook**: Auto-configures `gtr.hook.preRemove` via `git config --local` for tmux cleanup
 - **Command**: Provides Orchestrator Mode (`/orchestrator-mode`) for task delegation
-- **Worker Notification**: Supports automatic notification when workers complete PRs via file-based IPC
 
 ## Scripts
 
@@ -56,33 +55,6 @@ $PLUGIN_PATH/scripts/start --plan feat/new-feature "Implement new feature"
 2. Use the `start` script to create a worktree and launch Claude Code
 3. Work on multiple features in parallel across different tmux windows
 4. When done, use `git gtr rm <branch>` to clean up (tmux windows are auto-killed)
-
-## Orchestrator Mode
-
-Run `/orchestrator-mode` to enable orchestrator mode. In this mode:
-
-1. **Delegate tasks** to worker sessions running in separate worktrees
-2. **Receive notifications** when workers complete PRs (via Background Subagent polling `.claude-inbox/`)
-3. **Review and merge** PRs, then clean up worktrees
-
-### Worker Notification Flow
-
-```
-Orchestrator                      Worker (separate worktree)
-    │                                     │
-    │──── delegate task ─────────────────>│
-    │                                     │
-    │  (Background Subagent polls         │
-    │   .claude-inbox/ every 10s)         │
-    │                                     │
-    │<─── write to .claude-inbox/ ────────│ (after PR creation)
-    │                                     │
-    │  (Background Subagent wakes up      │
-    │   orchestrator with notification)   │
-    │                                     │
-    ▼                                     ▼
-  Review PR ────────────────────────> Cleanup
-```
 
 ## Tips
 
