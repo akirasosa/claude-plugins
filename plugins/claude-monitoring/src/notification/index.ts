@@ -2,11 +2,6 @@ import { shouldNotify } from "./dedup";
 import { generateSummary } from "./gemini";
 import { showNotification } from "./platform-notify";
 
-export { getGcpLocation, getGcpProject } from "./config";
-export { shouldNotify } from "./dedup";
-export { generateSummary } from "./gemini";
-export { showNotification } from "./platform-notify";
-
 export type EventType = "stop" | "notification" | "sessionstart" | "sessionend";
 
 export interface NotificationInput {
