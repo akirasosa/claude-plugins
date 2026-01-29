@@ -91,10 +91,15 @@ After starting workers, launch a Background Subagent to poll for notifications:
 
 ```
 Task(run_in_background: true, subagent_type: "general-purpose"):
-"Poll .claude-inbox/ every 10 seconds. Read ALL .json files found and return their contents. Delete files after reading to avoid reprocessing. Poll for up to 10 minutes."
+"Poll .claude-inbox/ every 10 seconds. When you find ANY .json files, read their contents and RETURN IMMEDIATELY with the notification data. Only continue polling if the directory is empty. Timeout after 10 minutes if no files found."
 ```
 
 Proceed to Phase 2 when the Background Subagent returns notifications.
+
+After receiving notifications, delete the processed files:
+```bash
+rm .claude-inbox/*.json
+```
 
 ## Phase 2: PR Review and Merge
 
