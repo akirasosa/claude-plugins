@@ -11,3 +11,5 @@ plugins/claude-monitoring/web/public/style.css
 .claude/*
 !.claude/CLAUDE.md
 !.claude/rules/
+
+# Parallel worker 1 test
