@@ -1,6 +1,6 @@
 # Claude Monitoring Web UI
 
-A simple web interface for monitoring Claude Code sessions. Displays the same information as the `/event-log` command with additional features.
+A simple web interface for monitoring Claude Code sessions with real-time updates and additional features.
 
 ## Features
 
