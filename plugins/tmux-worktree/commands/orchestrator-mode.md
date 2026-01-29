@@ -72,9 +72,33 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/start --plan research/skill-visibility "Objective:
 
 This creates a worktree, opens a new tmux window, and starts Claude Code in plan mode.
 
+### Worker Completion Notification
+
+**Always include this at the end of handoff prompts** (replace `<ORCHESTRATOR_DIR>` with `$(pwd)`):
+
+```
+---
+**After PR creation**, notify the orchestrator:
+mkdir -p <ORCHESTRATOR_DIR>/.claude-inbox && echo '{"worker_branch":"<branch>","pr_url":"<url>"}' > <ORCHESTRATOR_DIR>/.claude-inbox/$(uuidgen).json
+---
+```
+
+**Important**: Workers run in separate worktree directories. Use the orchestrator's **absolute path**.
+
+### Waiting for Notification (Background Subagent)
+
+After starting workers, launch a Background Subagent to poll for notifications:
+
+```
+Task(run_in_background: true, subagent_type: "general-purpose"):
+"Poll .claude-inbox/ every 10 seconds. Read ALL .json files found and return their contents. Delete files after reading to avoid reprocessing. Poll for up to 10 minutes."
+```
+
+Proceed to Phase 2 when the Background Subagent returns notifications.
+
 ## Phase 2: PR Review and Merge
 
-When the user returns saying a PR is ready:
+When you receive a notification from the Background Subagent, or the user says a PR is ready:
 
 1. **List open PRs**
    ```bash

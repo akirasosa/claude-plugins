@@ -1,6 +1,7 @@
 .osgrep
 .serena/
 node_modules/
+.claude-inbox/
 
 # Generated frontend bundles
 plugins/claude-monitoring/web/public/app.js
