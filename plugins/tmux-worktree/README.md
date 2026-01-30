@@ -79,6 +79,20 @@ Include the following in your handoff prompt:
 6. **Expected output**: Deliverable format (PR, docs, etc.)
 ```
 
+## Testing
+
+This plugin currently has no automated tests. The functionality can be verified manually:
+
+1. Ensure you're in a tmux session
+2. Run `mcp__plugin_tmux-worktree_worktree__start_worktree_session` with test parameters
+3. Verify a new tmux window is created with Claude Code
+
+To add tests in the future, create `*.test.ts` files and run:
+
+```bash
+cd plugins/tmux-worktree && bun test
+```
+
 ## Uninstalling
 
 ```bash
