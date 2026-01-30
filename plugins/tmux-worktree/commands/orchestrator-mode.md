@@ -101,9 +101,12 @@ IMPORTANT: Exit as soon as you receive a message so the orchestrator can process
 })
 ```
 
-**When the background agent exits**, you'll be notified. Read the output file to see the message, then:
-1. Process the message (review PR, answer question, etc.)
-2. Restart the background polling agent if more workers are running
+**CRITICAL: When the background agent exits**, immediately:
+1. Read the output file to see the message
+2. Process the message (review PR, answer question, etc.)
+3. **Restart the background polling agent immediately** (use the same Task command above)
+
+**Always keep polling running.** Restart it every time it exits.
 
 ## Phase 1: Task Delegation
 
@@ -256,6 +259,7 @@ This tool automatically reads the orchestrator ID from `.claude/.orchestrator-id
 
 ## Important Notes
 
+- **Always keep polling running**: Restart the polling agent immediately every time it exits
 - **Initialize first**: Always call `create_orchestrator_session` and start polling before delegating
 - **Always pass `orchestratorId`**: This enables automatic notification hooks
 - **Automatic PR detection**: When a worker runs `gh pr create`, the orchestrator is notified automatically
