@@ -79,6 +79,22 @@ Include the following in your handoff prompt:
 6. **Expected output**: Deliverable format (PR, docs, etc.)
 ```
 
+## Testing
+
+Run tests from the plugin directory:
+
+```bash
+cd plugins/tmux-worktree && bun test
+```
+
+Watch mode for development:
+
+```bash
+cd plugins/tmux-worktree && bun test --watch
+```
+
+**Note**: This plugin currently has limited automated tests due to its dependency on external systems (tmux, git worktrees). Manual testing with a tmux session is recommended for validating worktree creation and cleanup workflows.
+
 ## Uninstalling
 
 ```bash
