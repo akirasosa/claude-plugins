@@ -22,12 +22,12 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate ALL tasks—im
 │  1. Create orchestrator session (get ID)                    │
 │  2. Start background message polling                        │
 │  3. Discuss task with user → Create worktree (with ID)      │
-│  4. Receive notification when worker completes              │
+│  4. Receive AUTOMATIC notification when worker completes    │
 │  5. Review PR → Merge → Update main → Cleanup               │
 │  6. Repeat                                                  │
 └─────────────────────────────────────────────────────────────┘
          │                          ▲
-         │ delegate                 │ send_message (auto)
+         │ delegate                 │ AUTOMATIC (via hooks)
          ▼                          │
 ┌─────────────────────────────────────────────────────────────┐
 │  Worker Session (separate tmux window)                      │
@@ -35,9 +35,22 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate ALL tasks—im
 │  - Runs in plan mode                                        │
 │  - Executes the task (implementation, research, etc.)       │
 │  - Creates pull request                                     │
-│  - Auto-notifies orchestrator via MCP                       │
+│  - PostToolUse hook detects `gh pr create` → auto-notifies  │
+│  - SessionEnd hook notifies if session ends without PR      │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## How Automatic Notifications Work
+
+When you pass `orchestratorId` to `start_worktree_session`, the system automatically:
+
+1. **Records the worker** in a tracking database
+2. **Creates `.claude/.orchestrator-id`** file in the worktree
+3. **Configures hooks** in the worktree's `settings.local.json`:
+   - **PostToolUse hook**: Detects `gh pr create` commands and sends completion notification
+   - **SessionEnd hook**: Notifies if the session ends without creating a PR
+
+This means **workers don't need to manually call `send_message`**—notifications happen automatically!
 
 ## Phase 0: Initialize Orchestrator Session
 
@@ -128,25 +141,28 @@ Use the `mcp__plugin_tmux-worktree_worktree__start_worktree_session` tool:
 | prompt | Initial prompt for Claude Code |
 | fromRef | Base branch to create from |
 | orchestratorId | **Required** - The orchestrator session ID for auto-notifications |
+| taskType | Task type: 'pr' (default), 'research', or 'docs' |
 
-**IMPORTANT**: Always pass `orchestratorId` so workers can send notifications back.
+**IMPORTANT**: Always pass `orchestratorId` so automatic notifications are enabled.
 
 **Examples:**
 
 ```
-# Implementation task
+# Implementation task (will auto-notify when PR is created)
 mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-auth",
   planMode: true,
   orchestratorId: "orch_abc12345",
+  taskType: "pr",
   prompt: "Objective: Add user authentication..."
 })
 
-# Research task
+# Research task (worker should use send_completion manually)
 mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "research/skill-visibility",
   planMode: true,
   orchestratorId: "orch_abc12345",
+  taskType: "research",
   prompt: "Objective: Research why plugin skills don't appear in slash commands..."
 })
 
@@ -161,7 +177,7 @@ mcp__plugin_tmux-worktree_worktree__start_worktree_session({
 ```
 
 This creates a worktree, opens a new tmux window, and starts Claude Code.
-The worker will automatically receive instructions to notify you upon completion.
+**Automatic notification hooks are configured**—when the worker runs `gh pr create`, you'll be notified automatically.
 
 ## Phase 2: PR Review and Merge
 
@@ -225,13 +241,27 @@ This automatically cleans up the tmux window via the preRemove hook.
 | List merged worktrees | `git gtr clean --merged -n` |
 | Remove worktree | `git gtr rm <branch> --yes` |
 
+## Worker Tools (for manual notification)
+
+Workers in research/docs tasks can manually notify using:
+
+```
+mcp__plugin_tmux-worktree_worktree__send_completion({
+  summary: "Research complete: findings about X",
+  details: "Detailed findings..."
+})
+```
+
+This tool automatically reads the orchestrator ID from `.claude/.orchestrator-id` and the branch from git.
+
 ## Important Notes
 
 - **Initialize first**: Always call `create_orchestrator_session` and start polling before delegating
-- **Always pass `orchestratorId`**: Workers need this to send notifications back
+- **Always pass `orchestratorId`**: This enables automatic notification hooks
+- **Automatic PR detection**: When a worker runs `gh pr create`, the orchestrator is notified automatically
+- **Session end detection**: If a worker session ends without creating a PR, you'll be notified
 - Always use `planMode: true` when starting worker sessions
 - Workers should create PRs, not push directly to main
-- Workers will auto-notify you on completion—no need to manually check
 - Review PRs before merging, even if briefly
 - Clean up worktrees after merging to avoid clutter
 - The orchestrator session stays on the main branch

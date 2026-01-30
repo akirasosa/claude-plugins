@@ -44,7 +44,10 @@ function detectExistingVersion(db: Database): number {
   if (!tableExists(db, "orchestrator_sessions")) {
     return 0;
   }
-  // Currently only version 1 exists
+  // Check for migration 002: spawned_workers table
+  if (tableExists(db, "spawned_workers")) {
+    return 2;
+  }
   return 1;
 }
 

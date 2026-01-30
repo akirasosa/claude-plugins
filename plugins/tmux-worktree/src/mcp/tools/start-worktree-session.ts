@@ -1,4 +1,8 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { createSpawnedWorker } from "../../db/database.js";
+import type { TaskType } from "../../db/types.js";
 import { getMcpServersFromProject, updateClaudeConfig } from "../utils/claude-config.js";
 import { exec, execOrThrow } from "../utils/exec.js";
 import { createWindow, isTmuxAvailable, sendKeys, waitForShellInit } from "../utils/tmux.js";
@@ -9,38 +13,126 @@ export interface StartWorktreeSessionArgs {
   planMode?: boolean;
   prompt?: string;
   orchestratorId?: string;
+  taskType?: TaskType;
   pluginDir?: string; // Temporary: for local plugin testing
 }
 
 /**
  * Generates notification instructions for worker sessions
+ * Note: This is now supplementary - hooks handle automatic notification
  */
 function buildOrchestratorInstructions(orchestratorId: string, branch: string): string {
   return `
 
 ---
-## IMPORTANT: Orchestrator Notification
+## Worker Session Info
 
 You are running as a WORKER session spawned by an orchestrator (ID: ${orchestratorId}).
 
-**When you complete your task (PR created or task done), notify the orchestrator:**
+**Automatic notifications are enabled:**
+- When you create a PR using \`gh pr create\`, the orchestrator will be automatically notified.
+- When your session ends, the orchestrator will be notified.
 
+**For manual notification (e.g., research tasks without PR):**
 \`\`\`
-mcp__plugin_tmux-worktree_worktree__send_message({
-  orchestrator_id: "${orchestratorId}",
-  message_type: "task_complete",
-  content: {
-    summary: "Brief description of what was done",
-    pr_url: "https://github.com/...",  // if PR was created
-    branch: "${branch}"
-  }
+mcp__plugin_tmux-worktree_worktree__send_completion({
+  summary: "Brief description of what was done",
+  details: "Optional detailed findings..."
 })
 \`\`\`
 
-CRITICAL: Send this notification before ending your session!
+Branch: ${branch}
 ---
 
 `;
+}
+
+/**
+ * Gets the plugin root directory (where plugin.json is located)
+ */
+function getPluginRoot(): string {
+  // This file is at src/mcp/tools/start-worktree-session.ts
+  // Plugin root is 3 levels up
+  return dirname(dirname(dirname(import.meta.dir)));
+}
+
+/**
+ * Writes orchestrator ID file to worktree's .claude directory
+ */
+function writeOrchestratorIdFile(worktreePath: string, orchestratorId: string): void {
+  const claudeDir = join(worktreePath, ".claude");
+  if (!existsSync(claudeDir)) {
+    mkdirSync(claudeDir, { recursive: true });
+  }
+  writeFileSync(join(claudeDir, ".orchestrator-id"), orchestratorId);
+}
+
+interface SettingsLocalJson {
+  hooks?: {
+    PostToolUse?: Array<{
+      matcher?: string;
+      hooks: Array<{ type: string; command: string }>;
+    }>;
+    SessionEnd?: Array<{
+      hooks: Array<{ type: string; command: string }>;
+    }>;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * Configures PostToolUse and SessionEnd hooks in worktree's settings.local.json
+ */
+function configureWorkerHooks(worktreePath: string, pluginRoot: string): void {
+  const claudeDir = join(worktreePath, ".claude");
+  if (!existsSync(claudeDir)) {
+    mkdirSync(claudeDir, { recursive: true });
+  }
+
+  const settingsPath = join(claudeDir, "settings.local.json");
+
+  // Load existing settings or create new
+  let settings: SettingsLocalJson = {};
+  if (existsSync(settingsPath)) {
+    try {
+      settings = JSON.parse(readFileSync(settingsPath, "utf-8"));
+    } catch {
+      // Invalid JSON, start fresh
+      settings = {};
+    }
+  }
+
+  // Initialize hooks if not exists
+  if (!settings.hooks) {
+    settings.hooks = {};
+  }
+
+  // Add PostToolUse hook for PR detection
+  settings.hooks.PostToolUse = [
+    {
+      matcher: "Bash",
+      hooks: [
+        {
+          type: "command",
+          command: `bun run ${pluginRoot}/scripts/hooks/detect-pr-completion.ts`,
+        },
+      ],
+    },
+  ];
+
+  // Add SessionEnd hook for session end detection
+  settings.hooks.SessionEnd = [
+    {
+      hooks: [
+        {
+          type: "command",
+          command: `bun run ${pluginRoot}/scripts/hooks/detect-session-end.ts`,
+        },
+      ],
+    },
+  ];
+
+  writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 }
 
 /**
@@ -49,7 +141,7 @@ CRITICAL: Send this notification before ending your session!
 export async function startWorktreeSession(
   args: StartWorktreeSessionArgs,
 ): Promise<CallToolResult> {
-  const { branch, fromRef, planMode, prompt, orchestratorId, pluginDir } = args;
+  const { branch, fromRef, planMode, prompt, orchestratorId, taskType, pluginDir } = args;
 
   // Validate branch parameter
   if (!branch || typeof branch !== "string") {
@@ -113,6 +205,29 @@ export async function startWorktreeSession(
 
   // Update ~/.claude.json to trust the worktree and enable MCP servers
   updateClaudeConfig(worktreePath, mcpServers);
+
+  // If orchestratorId is provided, set up worker tracking and hooks
+  if (orchestratorId) {
+    // 1. Record spawned worker in database
+    try {
+      createSpawnedWorker({
+        orchestrator_id: orchestratorId,
+        branch,
+        worktree_path: worktreePath,
+        task_type: taskType,
+      });
+    } catch (e) {
+      // Log but don't fail - DB might not be initialized
+      console.error("Failed to record spawned worker:", e);
+    }
+
+    // 2. Write orchestrator ID file
+    writeOrchestratorIdFile(worktreePath, orchestratorId);
+
+    // 3. Configure hooks for automatic notification
+    const pluginRoot = pluginDir || getPluginRoot();
+    configureWorkerHooks(worktreePath, pluginRoot);
+  }
 
   // Window name (remove branch prefix like feat/, fix/, etc.)
   const windowName = branch.includes("/") ? branch.split("/").pop() || branch : branch;

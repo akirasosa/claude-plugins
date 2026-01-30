@@ -3,10 +3,13 @@ import { existsSync, mkdirSync } from "node:fs";
 import { DB_DIR, DB_FILE } from "./config";
 import type {
   CreateOrchestratorInput,
+  CreateSpawnedWorkerInput,
   Message,
   OrchestratorSession,
   OrchestratorStatus,
   SendMessageInput,
+  SpawnedWorker,
+  WorkerStatus,
 } from "./types";
 
 export function dbExists(): boolean {
@@ -182,6 +185,72 @@ export function cleanupOldMessages(retentionDays: number): number {
     ).run(cutoffIso);
 
     return messageResult.changes;
+  } finally {
+    db.close();
+  }
+}
+
+// Spawned Worker Operations
+
+export function createSpawnedWorker(input: CreateSpawnedWorkerInput): SpawnedWorker {
+  const db = getDb();
+  try {
+    const now = new Date().toISOString();
+    const taskType = input.task_type || "pr";
+
+    const result = db
+      .prepare(
+        `INSERT INTO spawned_workers (orchestrator_id, branch, worktree_path, task_type, status, created_at)
+       VALUES (?, ?, ?, ?, 'active', ?)`,
+      )
+      .run(input.orchestrator_id, input.branch, input.worktree_path, taskType, now);
+
+    return {
+      id: Number(result.lastInsertRowid),
+      orchestrator_id: input.orchestrator_id,
+      branch: input.branch,
+      worktree_path: input.worktree_path,
+      task_type: taskType,
+      status: "active",
+      pr_url: null,
+      created_at: now,
+      completed_at: null,
+    };
+  } finally {
+    db.close();
+  }
+}
+
+export function getSpawnedWorkerByPath(worktreePath: string): SpawnedWorker | null {
+  return withReadOnlyDb((db) => {
+    const result = db
+      .query("SELECT * FROM spawned_workers WHERE worktree_path = ? AND status = 'active'")
+      .get(worktreePath) as SpawnedWorker | null;
+    return result;
+  }, null);
+}
+
+export function updateSpawnedWorkerStatus(
+  worktreePath: string,
+  status: WorkerStatus,
+  prUrl?: string,
+): boolean {
+  if (!dbExists()) return false;
+
+  const db = getDb();
+  try {
+    const now = new Date().toISOString();
+    const completedAt = status === "completed" || status === "ended" ? now : null;
+
+    const result = db
+      .prepare(
+        `UPDATE spawned_workers
+         SET status = ?, pr_url = COALESCE(?, pr_url), completed_at = COALESCE(?, completed_at)
+         WHERE worktree_path = ? AND status = 'active'`,
+      )
+      .run(status, prUrl || null, completedAt, worktreePath);
+
+    return result.changes > 0;
   } finally {
     db.close();
   }

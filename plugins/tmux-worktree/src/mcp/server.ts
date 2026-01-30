@@ -12,6 +12,7 @@ import {
   getOrchestratorStatus,
 } from "./tools/get-orchestrator-status.js";
 import { type PollMessagesArgs, pollMessages } from "./tools/poll-messages.js";
+import { type SendCompletionArgs, sendCompletion } from "./tools/send-completion.js";
 import { type SendMessageArgs, sendMessage } from "./tools/send-message.js";
 import {
   type StartWorktreeSessionArgs,
@@ -45,6 +46,11 @@ const TOOL_DEFINITIONS = [
         orchestratorId: {
           type: "string",
           description: "Optional orchestrator session ID for worker->orchestrator messaging",
+        },
+        taskType: {
+          type: "string",
+          enum: ["pr", "research", "docs"],
+          description: "Type of task (default: 'pr'). Affects notification behavior.",
         },
         pluginDir: {
           type: "string",
@@ -136,9 +142,32 @@ const TOOL_DEFINITIONS = [
       required: ["orchestrator_id"],
     },
   },
+  {
+    name: "send_completion",
+    description:
+      "Simplified completion notification for worker sessions. Automatically reads orchestrator ID from .claude/.orchestrator-id and branch from git. Use this for manual completion notification (e.g., research tasks without PR).",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        summary: {
+          type: "string",
+          description: "Brief summary of what was accomplished",
+        },
+        details: {
+          type: "string",
+          description: "Optional detailed findings or notes",
+        },
+        pr_url: {
+          type: "string",
+          description: "Optional PR URL if one was created",
+        },
+      },
+      required: ["summary"],
+    },
+  },
 ];
 
-const server = new Server({ name: "worktree", version: "3.0.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "worktree", version: "3.1.0" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOL_DEFINITIONS,
@@ -158,6 +187,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToo
       return pollMessages(args as unknown as PollMessagesArgs);
     case "get_orchestrator_status":
       return getOrchestratorStatus(args as unknown as GetOrchestratorStatusArgs);
+    case "send_completion":
+      return sendCompletion(args as unknown as SendCompletionArgs);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

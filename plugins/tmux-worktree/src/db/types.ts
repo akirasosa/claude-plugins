@@ -44,3 +44,28 @@ export interface OrchestratorStatus {
   total_messages: number;
   created_at: string;
 }
+
+// Spawned Worker types
+
+export type TaskType = "pr" | "research" | "docs";
+
+export type WorkerStatus = "active" | "completed" | "ended";
+
+export interface SpawnedWorker {
+  id: number;
+  orchestrator_id: string;
+  branch: string;
+  worktree_path: string;
+  task_type: TaskType;
+  status: WorkerStatus;
+  pr_url: string | null;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface CreateSpawnedWorkerInput {
+  orchestrator_id: string;
+  branch: string;
+  worktree_path: string;
+  task_type?: TaskType;
+}
