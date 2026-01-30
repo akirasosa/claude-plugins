@@ -9,6 +9,7 @@ export interface StartWorktreeSessionArgs {
   planMode?: boolean;
   prompt?: string;
   orchestratorId?: string;
+  pluginDir?: string; // Temporary: for local plugin testing
 }
 
 /**
@@ -48,7 +49,7 @@ CRITICAL: Send this notification before ending your session!
 export async function startWorktreeSession(
   args: StartWorktreeSessionArgs,
 ): Promise<CallToolResult> {
-  const { branch, fromRef, planMode, prompt, orchestratorId } = args;
+  const { branch, fromRef, planMode, prompt, orchestratorId, pluginDir } = args;
 
   // Validate branch parameter
   if (!branch || typeof branch !== "string") {
@@ -143,14 +144,18 @@ export async function startWorktreeSession(
 
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
+  const pluginDirFlag = pluginDir ? `--plugin-dir "${pluginDir}"` : "";
 
   if (finalPrompt) {
     // Use base64 encoding to safely transfer prompts with newlines or special characters
     // macOS base64 adds line breaks every 76 chars, so remove them with tr -d '\n'
     const encoded = Buffer.from(finalPrompt).toString("base64");
-    sendKeys(windowId, `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`);
+    sendKeys(
+      windowId,
+      `"claude ${planModeFlag} ${pluginDirFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`,
+    );
   } else {
-    sendKeys(windowId, `"claude ${planModeFlag}"`);
+    sendKeys(windowId, `"claude ${planModeFlag} ${pluginDirFlag}"`);
   }
 
   return {
