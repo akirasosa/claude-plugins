@@ -47,8 +47,6 @@ export interface OrchestratorStatus {
 
 // Spawned Worker types
 
-export type TaskType = "pr" | "research" | "docs";
-
 export type WorkerStatus = "active" | "completed" | "ended";
 
 export interface SpawnedWorker {
@@ -56,7 +54,6 @@ export interface SpawnedWorker {
   orchestrator_id: string;
   branch: string;
   worktree_path: string;
-  task_type: TaskType;
   status: WorkerStatus;
   pr_url: string | null;
   created_at: string;
@@ -67,5 +64,4 @@ export interface CreateSpawnedWorkerInput {
   orchestrator_id: string;
   branch: string;
   worktree_path: string;
-  task_type?: TaskType;
 }

@@ -196,21 +196,19 @@ export function createSpawnedWorker(input: CreateSpawnedWorkerInput): SpawnedWor
   const db = getDb();
   try {
     const now = new Date().toISOString();
-    const taskType = input.task_type || "pr";
 
     const result = db
       .prepare(
-        `INSERT INTO spawned_workers (orchestrator_id, branch, worktree_path, task_type, status, created_at)
-       VALUES (?, ?, ?, ?, 'active', ?)`,
+        `INSERT INTO spawned_workers (orchestrator_id, branch, worktree_path, status, created_at)
+       VALUES (?, ?, ?, 'active', ?)`,
       )
-      .run(input.orchestrator_id, input.branch, input.worktree_path, taskType, now);
+      .run(input.orchestrator_id, input.branch, input.worktree_path, now);
 
     return {
       id: Number(result.lastInsertRowid),
       orchestrator_id: input.orchestrator_id,
       branch: input.branch,
       worktree_path: input.worktree_path,
-      task_type: taskType,
       status: "active",
       pr_url: null,
       created_at: now,

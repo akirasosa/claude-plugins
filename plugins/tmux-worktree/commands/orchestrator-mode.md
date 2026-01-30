@@ -142,29 +142,18 @@ Use the `mcp__plugin_tmux-worktree_worktree__start_worktree_session` tool:
 | prompt | Initial prompt for Claude Code |
 | fromRef | Base branch to create from |
 | orchestratorId | **Required** - The orchestrator session ID for auto-notifications |
-| taskType | Task type: 'pr' (default), 'research', or 'docs' |
 
 **IMPORTANT**: Always pass `orchestratorId` so automatic notifications are enabled.
 
 **Examples:**
 
 ```
-# Implementation task (will auto-notify when PR is created)
+# Standard task (will auto-notify when PR is created)
 mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-auth",
   planMode: true,
   orchestratorId: "orch_abc12345",
-  taskType: "pr",
   prompt: "Objective: Add user authentication..."
-})
-
-# Research task (worker should use send_completion manually)
-mcp__plugin_tmux-worktree_worktree__start_worktree_session({
-  branch: "research/skill-visibility",
-  planMode: true,
-  orchestratorId: "orch_abc12345",
-  taskType: "research",
-  prompt: "Objective: Research why plugin skills don't appear in slash commands..."
 })
 
 # From a specific base branch
@@ -246,19 +235,6 @@ This automatically cleans up the tmux window via the preRemove hook.
 | Update main | `git fetch origin && git pull origin main` |
 | List merged worktrees | `git gtr clean --merged -n` |
 | Remove worktree | `git gtr rm <branch> --yes` |
-
-## Worker Tools (for manual notification)
-
-Workers in research/docs tasks can manually notify using:
-
-```
-mcp__plugin_tmux-worktree_worktree__send_completion({
-  summary: "Research complete: findings about X",
-  details: "Detailed findings..."
-})
-```
-
-This tool automatically reads the orchestrator ID from `.claude/.orchestrator-id` and the branch from git.
 
 ## Important Notes
 

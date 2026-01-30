@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS spawned_workers (
     orchestrator_id TEXT NOT NULL,
     branch TEXT NOT NULL,
     worktree_path TEXT NOT NULL,
-    task_type TEXT DEFAULT 'pr',      -- 'pr', 'research', 'docs'
     status TEXT DEFAULT 'active',     -- 'active', 'completed', 'ended'
     pr_url TEXT,
     created_at TEXT NOT NULL,
