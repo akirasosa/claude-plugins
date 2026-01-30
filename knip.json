@@ -15,7 +15,8 @@
     },
     "plugins/claude-monitoring/web": {
       "project": ["**/*.ts"],
-      "ignore": ["src/**", "vite.config.ts"]
+      "ignore": ["src/**", "vite.config.ts"],
+      "vite": false
     }
   }
 }
