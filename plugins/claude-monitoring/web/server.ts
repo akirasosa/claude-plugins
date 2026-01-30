@@ -1,5 +1,7 @@
 import { type FSWatcher, watch } from "node:fs";
-import { join } from "node:path";
+import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
+import { cors } from "hono/cors";
 import {
   cleanupDeadSessions,
   dbExists,
@@ -17,7 +19,6 @@ import {
 // In production (PORT=3847 or default), serve from dist/
 const DEFAULT_PORT = 3847;
 const PORT = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : DEFAULT_PORT;
-const STATIC_DIR = join(import.meta.dir, "dist");
 
 // SSE clients
 interface SSEClient {
@@ -98,77 +99,62 @@ function startWatcher() {
   }
 }
 
-function getContentType(path: string): string {
-  if (path.endsWith(".html")) return "text/html; charset=utf-8";
-  if (path.endsWith(".js")) return "application/javascript; charset=utf-8";
-  if (path.endsWith(".css")) return "text/css; charset=utf-8";
-  if (path.endsWith(".json")) return "application/json; charset=utf-8";
-  if (path.endsWith(".svg")) return "image/svg+xml";
-  return "application/octet-stream";
-}
+// Create Hono app with chain-style API
+const app = new Hono()
+  // CORS middleware
+  .use("/*", cors())
 
-async function handleRequest(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  const path = url.pathname;
-
-  // API routes
-  if (path === "/api/events") {
-    const mode = (url.searchParams.get("mode") || "waiting") as FilterMode;
-    return new Response(serializeEventsData(mode), {
-      headers: { "Content-Type": "application/json" },
+  // GET /api/events
+  .get("/api/events", (c) => {
+    const mode = (c.req.query("mode") || "waiting") as FilterMode;
+    return c.json({
+      events: getActiveEvents(mode),
+      last_modified: getDbLastModified(),
     });
-  }
+  })
 
-  // Delete session API
-  if (path.match(/^\/api\/sessions\/[^/]+$/) && req.method === "DELETE") {
-    const sessionId = path.split("/")[3];
+  // DELETE /api/sessions/:id
+  .delete("/api/sessions/:id", (c) => {
+    const sessionId = c.req.param("id");
     const success = deleteSession(sessionId);
     if (success) {
-      // Broadcast update to all connected clients
       setTimeout(() => broadcastUpdate(), 50);
-      return Response.json({ success: true });
+      return c.json({ success: true });
     }
-    return Response.json({ success: false, error: "Failed to delete session" }, { status: 500 });
-  }
+    return c.json({ success: false, error: "Failed to delete session" }, 500);
+  })
 
-  // Session status API (for process tracking)
-  if (path.match(/^\/api\/sessions\/[^/]+\/status$/) && req.method === "GET") {
-    const sessionId = path.split("/")[3];
-    return Response.json(getSessionStatus(sessionId));
-  }
+  // GET /api/sessions/:id/status
+  .get("/api/sessions/:id/status", (c) => {
+    const sessionId = c.req.param("id");
+    return c.json(getSessionStatus(sessionId));
+  })
 
-  // Cleanup preview API - returns sessions that would be deleted
-  if (path === "/api/cleanup/preview" && req.method === "GET") {
+  // GET /api/cleanup/preview
+  .get("/api/cleanup/preview", (c) => {
     const candidates = getCleanupCandidates();
-    return Response.json({
-      count: candidates.length,
-      sessions: candidates,
-    });
-  }
+    return c.json({ count: candidates.length, sessions: candidates });
+  })
 
-  // Cleanup API - performs bulk deletion of dead sessions
-  if (path === "/api/cleanup" && req.method === "POST") {
+  // POST /api/cleanup
+  .post("/api/cleanup", (c) => {
     const result = cleanupDeadSessions();
     if (result.deleted_count > 0) {
-      // Broadcast update to all connected clients
       setTimeout(() => broadcastUpdate(), 50);
     }
-    return Response.json(result);
-  }
+    return c.json(result);
+  })
 
-  if (path === "/api/events/stream") {
-    // Start watcher if not already started
+  // SSE endpoint - keep manual ReadableStream (works well with broadcast pattern)
+  .get("/api/events/stream", (c) => {
     startWatcher();
-
-    const mode = (url.searchParams.get("mode") || "waiting") as FilterMode;
+    const mode = (c.req.query("mode") || "waiting") as FilterMode;
     let client: SSEClient;
 
     const stream = new ReadableStream({
       start(controller) {
         client = { controller, mode };
         clients.add(client);
-
-        // Send initial data
         controller.enqueue(new TextEncoder().encode(`data: ${serializeEventsData(mode)}\n\n`));
       },
       cancel() {
@@ -183,27 +169,13 @@ async function handleRequest(req: Request): Promise<Response> {
         Connection: "keep-alive",
       },
     });
-  }
+  })
 
-  // Static files
-  let filePath: string;
-  if (path === "/" || path === "/index.html") {
-    filePath = join(STATIC_DIR, "index.html");
-  } else if (path.startsWith("/static/")) {
-    filePath = join(STATIC_DIR, path.slice(8));
-  } else {
-    filePath = join(STATIC_DIR, path);
-  }
+  // Static files (Hono's serveStatic handles MIME types automatically)
+  .use("/*", serveStatic({ root: "./dist" }));
 
-  const file = Bun.file(filePath);
-  if (await file.exists()) {
-    return new Response(file, {
-      headers: { "Content-Type": getContentType(filePath) },
-    });
-  }
-
-  return new Response("Not Found", { status: 404 });
-}
+// Export type for future RPC client
+export type AppType = typeof app;
 
 // Main startup
 async function main() {
@@ -225,7 +197,7 @@ async function main() {
   try {
     server = Bun.serve({
       port: PORT,
-      fetch: handleRequest,
+      fetch: app.fetch,
       idleTimeout: 255, // Max value for SSE connections
     });
   } catch (err: unknown) {
@@ -234,7 +206,7 @@ async function main() {
       console.error(`Port ${PORT} is in use by another application`);
       server = Bun.serve({
         port: 0,
-        fetch: handleRequest,
+        fetch: app.fetch,
         idleTimeout: 255,
       });
     } else {
