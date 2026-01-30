@@ -84,3 +84,40 @@ Include the following in your handoff prompt:
 ```bash
 claude plugin uninstall tmux-worktree
 ```
+
+## Testing
+
+This plugin requires manual testing due to its tmux and MCP server dependencies.
+
+### Prerequisites
+
+- Running tmux session
+- Git repository with worktree support
+- Claude Code installed
+
+### Manual Testing
+
+1. **Install the plugin locally**:
+   ```bash
+   claude --plugin-dir /path/to/tmux-worktree
+   ```
+
+2. **Verify MCP tools are available**:
+   ```
+   /mcp
+   ```
+   Confirm `start_worktree_session` tool is listed.
+
+3. **Test worktree creation**:
+   ```
+   mcp__plugin_tmux-worktree_worktree__start_worktree_session({
+     branch: "test/manual-test",
+     planMode: true
+   })
+   ```
+
+4. **Verify cleanup**:
+   ```bash
+   git gtr rm test/manual-test
+   ```
+   Confirm tmux window is automatically closed.
