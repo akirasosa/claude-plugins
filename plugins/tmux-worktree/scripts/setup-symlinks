@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create symlinks for .claude/settings.local.json in new worktrees
+# Create symlinks for .claude/settings.local.json and CLAUDE.local.md in new worktrees
 # Called from git-gtr's postCreate hook (runs in the worktree directory)
 
 set -euo pipefail
@@ -22,4 +22,14 @@ if [[ -f "$source_file" ]]; then
     [[ -e "$target_file" || -L "$target_file" ]] && rm -f "$target_file"
     ln -s "$source_file" "$target_file"
     echo "Created symlink: $target_file -> $source_file"
+fi
+
+# Symlink CLAUDE.local.md (user's private project instructions)
+source_file_claude_local="$main_repo/CLAUDE.local.md"
+target_file_claude_local="$worktree_path/CLAUDE.local.md"
+
+if [[ -f "$source_file_claude_local" ]]; then
+    [[ -e "$target_file_claude_local" || -L "$target_file_claude_local" ]] && rm -f "$target_file_claude_local"
+    ln -s "$source_file_claude_local" "$target_file_claude_local"
+    echo "Created symlink: $target_file_claude_local -> $source_file_claude_local"
 fi
