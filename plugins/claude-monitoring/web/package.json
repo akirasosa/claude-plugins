@@ -13,7 +13,9 @@
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage"
   },
-  "dependencies": {},
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
   "devDependencies": {
     "@happy-dom/global-registrator": "^16.6.0",
     "@tailwindcss/vite": "^4.0.0",
