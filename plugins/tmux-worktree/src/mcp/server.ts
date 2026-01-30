@@ -6,6 +6,13 @@ import {
   type CallToolResult,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { type CreateOrchestratorArgs, createOrchestrator } from "./tools/create-orchestrator.js";
+import {
+  type GetOrchestratorStatusArgs,
+  getOrchestratorStatus,
+} from "./tools/get-orchestrator-status.js";
+import { type PollMessagesArgs, pollMessages } from "./tools/poll-messages.js";
+import { type SendMessageArgs, sendMessage } from "./tools/send-message.js";
 import {
   type StartWorktreeSessionArgs,
   startWorktreeSession,
@@ -35,8 +42,94 @@ const TOOL_DEFINITIONS = [
           type: "string",
           description: "Optional initial prompt for Claude Code",
         },
+        orchestratorId: {
+          type: "string",
+          description: "Optional orchestrator session ID for worker->orchestrator messaging",
+        },
       },
       required: ["branch"],
+    },
+  },
+  {
+    name: "create_orchestrator_session",
+    description:
+      "Creates a new orchestrator session for coordinating worker tasks. Returns an orchestrator_id to use with start_worktree_session.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        project_dir: {
+          type: "string",
+          description: "Project directory (defaults to current working directory)",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "send_message",
+    description:
+      "Sends a message from a worker to an orchestrator. Use this to notify completion, failure, or ask questions.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        orchestrator_id: {
+          type: "string",
+          description: "The orchestrator session ID to send the message to",
+        },
+        message_type: {
+          type: "string",
+          enum: ["task_complete", "task_failed", "question"],
+          description: "Type of message being sent",
+        },
+        content: {
+          type: "object",
+          description:
+            "Message content with summary, and optional details, pr_url, branch, error, question fields",
+          properties: {
+            summary: { type: "string", description: "Brief summary of the message" },
+            details: { type: "string", description: "Additional details" },
+            pr_url: { type: "string", description: "Pull request URL if applicable" },
+            branch: { type: "string", description: "Git branch name" },
+            error: { type: "string", description: "Error message if task_failed" },
+            question: { type: "string", description: "Question text if asking" },
+          },
+          required: ["summary"],
+        },
+        worker_id: {
+          type: "string",
+          description: "Optional worker identifier",
+        },
+      },
+      required: ["orchestrator_id", "message_type", "content"],
+    },
+  },
+  {
+    name: "poll_messages",
+    description:
+      "Polls for unread messages from workers and marks them as read. Use in a background subagent to receive notifications.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        orchestrator_id: {
+          type: "string",
+          description: "The orchestrator session ID to poll messages for",
+        },
+      },
+      required: ["orchestrator_id"],
+    },
+  },
+  {
+    name: "get_orchestrator_status",
+    description: "Gets the status of an orchestrator session including unread message count.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        orchestrator_id: {
+          type: "string",
+          description: "The orchestrator session ID to check status for",
+        },
+      },
+      required: ["orchestrator_id"],
     },
   },
 ];
@@ -50,11 +143,20 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
 server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToolResult> => {
   const { name, arguments: args } = request.params;
 
-  if (name === "start_worktree_session") {
-    return startWorktreeSession(args as unknown as StartWorktreeSessionArgs);
+  switch (name) {
+    case "start_worktree_session":
+      return startWorktreeSession(args as unknown as StartWorktreeSessionArgs);
+    case "create_orchestrator_session":
+      return createOrchestrator(args as unknown as CreateOrchestratorArgs);
+    case "send_message":
+      return sendMessage(args as unknown as SendMessageArgs);
+    case "poll_messages":
+      return pollMessages(args as unknown as PollMessagesArgs);
+    case "get_orchestrator_status":
+      return getOrchestratorStatus(args as unknown as GetOrchestratorStatusArgs);
+    default:
+      throw new Error(`Unknown tool: ${name}`);
   }
-
-  throw new Error(`Unknown tool: ${name}`);
 });
 
 const transport = new StdioServerTransport();

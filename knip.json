@@ -24,7 +24,7 @@
       "ignore": ["src/sse.ts", "src/ui.ts", "src/types.ts", "src/components/*.ts"]
     },
     "plugins/tmux-worktree": {
-      "entry": ["src/ensure-gtrconfig.ts"],
+      "entry": ["src/ensure-gtrconfig.ts", "src/mcp/server.ts", "**/*.test.ts"],
       "project": ["src/**/*.ts"]
     }
   }

@@ -8,6 +8,38 @@ export interface StartWorktreeSessionArgs {
   fromRef?: string;
   planMode?: boolean;
   prompt?: string;
+  orchestratorId?: string;
+}
+
+/**
+ * Generates notification instructions for worker sessions
+ */
+function buildOrchestratorInstructions(orchestratorId: string, branch: string): string {
+  return `
+
+---
+## IMPORTANT: Orchestrator Notification
+
+You are running as a WORKER session spawned by an orchestrator (ID: ${orchestratorId}).
+
+**When you complete your task (PR created or task done), notify the orchestrator:**
+
+\`\`\`
+mcp__plugin_tmux-worktree_worktree__send_message({
+  orchestrator_id: "${orchestratorId}",
+  message_type: "task_complete",
+  content: {
+    summary: "Brief description of what was done",
+    pr_url: "https://github.com/...",  // if PR was created
+    branch: "${branch}"
+  }
+})
+\`\`\`
+
+CRITICAL: Send this notification before ending your session!
+---
+
+`;
 }
 
 /**
@@ -16,7 +48,7 @@ export interface StartWorktreeSessionArgs {
 export async function startWorktreeSession(
   args: StartWorktreeSessionArgs,
 ): Promise<CallToolResult> {
-  const { branch, fromRef, planMode, prompt } = args;
+  const { branch, fromRef, planMode, prompt, orchestratorId } = args;
 
   // Validate branch parameter
   if (!branch || typeof branch !== "string") {
@@ -103,13 +135,19 @@ export async function startWorktreeSession(
   // Wait for shell initialization
   await waitForShellInit();
 
+  // Build the final prompt, optionally adding orchestrator instructions
+  let finalPrompt = prompt || "";
+  if (orchestratorId) {
+    finalPrompt = finalPrompt + buildOrchestratorInstructions(orchestratorId, branch);
+  }
+
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
 
-  if (prompt) {
+  if (finalPrompt) {
     // Use base64 encoding to safely transfer prompts with newlines or special characters
     // macOS base64 adds line breaks every 76 chars, so remove them with tr -d '\n'
-    const encoded = Buffer.from(prompt).toString("base64");
+    const encoded = Buffer.from(finalPrompt).toString("base64");
     sendKeys(windowId, `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`);
   } else {
     sendKeys(windowId, `"claude ${planModeFlag}"`);
