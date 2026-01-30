@@ -47,8 +47,8 @@ jobs:
       - name: Install web dependencies
         run: cd plugins/claude-monitoring/web && bun install --frozen-lockfile
 
-      - name: Run Vitest unit tests
-        run: cd plugins/claude-monitoring/web && bun run test:run
+      - name: Run Bun unit tests (web)
+        run: cd plugins/claude-monitoring/web && bun test
 
   security-scan:
     name: Security Scan

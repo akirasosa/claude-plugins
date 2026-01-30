@@ -1,29 +1,35 @@
-import { vi } from "vitest";
+/// <reference lib="dom" />
 
-// Mock IndexedDB
+import { mock } from "bun:test";
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
+
+// Register browser globals (document, window, fetch, etc.)
+GlobalRegistrator.register();
+
+// Mock IndexedDB (not provided by happy-dom)
 const createMockObjectStore = () => ({
-  get: vi.fn(() => ({ onsuccess: null, onerror: null, result: undefined })),
-  put: vi.fn(() => ({ onsuccess: null, onerror: null })),
-  delete: vi.fn(() => ({ onsuccess: null, onerror: null })),
-  getAll: vi.fn(() => ({ onsuccess: null, onerror: null, result: [] })),
+  get: mock(() => ({ onsuccess: null, onerror: null, result: undefined })),
+  put: mock(() => ({ onsuccess: null, onerror: null })),
+  delete: mock(() => ({ onsuccess: null, onerror: null })),
+  getAll: mock(() => ({ onsuccess: null, onerror: null, result: [] })),
 });
 
 const createMockTransaction = () => ({
-  objectStore: vi.fn(() => createMockObjectStore()),
+  objectStore: mock(() => createMockObjectStore()),
   oncomplete: null,
   onerror: null,
 });
 
 const createMockDatabase = () => ({
   objectStoreNames: {
-    contains: vi.fn(() => false),
+    contains: mock(() => false),
   },
-  createObjectStore: vi.fn(() => createMockObjectStore()),
-  transaction: vi.fn(() => createMockTransaction()),
-  close: vi.fn(),
+  createObjectStore: mock(() => createMockObjectStore()),
+  transaction: mock(() => createMockTransaction()),
+  close: mock(() => {}),
 });
 
-const mockIndexedDBOpen = vi.fn(() => {
+const mockIndexedDBOpen = mock(() => {
   const request = {
     result: createMockDatabase(),
     onsuccess: null as ((event: Event) => void) | null,
@@ -44,13 +50,13 @@ const mockIndexedDBOpen = vi.fn(() => {
   return request;
 });
 
-// Use globalThis assignment instead of vi.stubGlobal for better compatibility
 Object.defineProperty(globalThis, "indexedDB", {
   value: { open: mockIndexedDBOpen },
   writable: true,
+  configurable: true,
 });
 
-// Mock EventSource
+// Mock EventSource (not provided by happy-dom)
 class MockEventSource {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
@@ -96,14 +102,8 @@ class MockEventSource {
 Object.defineProperty(globalThis, "EventSource", {
   value: MockEventSource,
   writable: true,
-});
-
-// Mock fetch for API calls
-const mockFetch = vi.fn();
-Object.defineProperty(globalThis, "fetch", {
-  value: mockFetch,
-  writable: true,
+  configurable: true,
 });
 
 // Export mocks for test access
-export { MockEventSource, mockFetch, mockIndexedDBOpen };
+export { MockEventSource, mockIndexedDBOpen };

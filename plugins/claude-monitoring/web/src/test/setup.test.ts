@@ -1,31 +1,38 @@
-import { describe, expect, it } from "vitest";
-import { MockEventSource, mockFetch } from "./setup";
+/// <reference lib="dom" />
+import { describe, expect, it } from "bun:test";
+import { MockEventSource, mockIndexedDBOpen } from "./setup";
 
 describe("Test Setup", () => {
-  describe("MockEventSource", () => {
-    it("should be available globally", () => {
+  describe("happy-dom globals", () => {
+    it("should provide document global", () => {
+      expect(document).toBeDefined();
+      expect(typeof document.createElement).toBe("function");
+    });
+
+    it("should provide window global", () => {
+      expect(window).toBeDefined();
+    });
+
+    it("should provide EventSource global", () => {
       expect(EventSource).toBeDefined();
       expect(EventSource).toBe(MockEventSource);
     });
 
-    it("should create instance with url", () => {
-      const es = new EventSource("/api/events/stream");
-      expect(es.url).toBe("/api/events/stream");
-      expect(es.readyState).toBe(EventSource.CONNECTING);
-    });
-  });
-
-  describe("IndexedDB", () => {
-    it("should be mocked", () => {
-      expect(indexedDB).toBeDefined();
-      expect(indexedDB.open).toBeDefined();
-    });
-  });
-
-  describe("fetch", () => {
-    it("should be mocked", () => {
+    it("should provide fetch global", () => {
       expect(fetch).toBeDefined();
-      expect(fetch).toBe(mockFetch);
+    });
+  });
+
+  describe("IndexedDB mock", () => {
+    it("should be available globally", () => {
+      expect(indexedDB).toBeDefined();
+      expect(indexedDB.open).toBe(mockIndexedDBOpen);
+    });
+
+    it("should return mock request on open", () => {
+      const request = indexedDB.open("test-db");
+      expect(request).toBeDefined();
+      expect(request.result).toBeDefined();
     });
   });
 });
