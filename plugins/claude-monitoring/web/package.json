@@ -17,7 +17,7 @@
     "hono": "^4.7.0"
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^16.6.0",
+    "@happy-dom/global-registrator": "^20.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/bun": "latest",
     "concurrently": "^9.1.2",

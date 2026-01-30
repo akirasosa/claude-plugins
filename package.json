@@ -2,6 +2,11 @@
   "name": "claude-plugins",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "plugins/claude-monitoring",
+    "plugins/claude-monitoring/web",
+    "plugins/tmux-worktree"
+  ],
   "scripts": {
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
