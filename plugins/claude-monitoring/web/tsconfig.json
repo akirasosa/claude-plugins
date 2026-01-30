@@ -9,8 +9,11 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "types": ["bun-types"],
-    "lib": ["ESNext", "DOM"]
+    "lib": ["ESNext", "DOM"],
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
   },
-  "include": ["plugins/**/*.ts"],
-  "exclude": ["node_modules", "**/node_modules", "plugins/claude-monitoring/web/**"]
+  "include": ["src/**/*.ts", "server.ts", "vite.config.ts"],
+  "exclude": ["node_modules"]
 }
