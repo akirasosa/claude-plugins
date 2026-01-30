@@ -5,10 +5,12 @@ export { RETENTION_DAYS } from "./config";
 export {
   cleanupOldMessages,
   createOrchestratorSession,
+  createSpawnedWorker,
   getOrchestratorSession,
   getOrchestratorStatus,
   pollMessages,
   sendMessage,
+  updateSpawnedWorkerStatus,
 } from "./database";
 
 // Migrations

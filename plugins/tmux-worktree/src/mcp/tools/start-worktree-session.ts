@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { createSpawnedWorker } from "../../db/database.js";
+import { createSpawnedWorker } from "../../db/index.js";
 import type { TaskType } from "../../db/types.js";
 import { getMcpServersFromProject, updateClaudeConfig } from "../utils/claude-config.js";
 import { exec, execOrThrow } from "../utils/exec.js";

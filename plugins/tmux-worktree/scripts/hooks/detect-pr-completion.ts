@@ -12,7 +12,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { sendMessage, updateSpawnedWorkerStatus } from "../../src/db/database";
+import { sendMessage, updateSpawnedWorkerStatus } from "../../src/db/index.js";
 
 interface ToolInput {
   command?: string;
