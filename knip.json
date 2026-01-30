@@ -10,6 +10,10 @@
     "plugins/**/*.test.ts"
   ],
   "project": ["plugins/**/*.ts"],
-  "ignore": ["plugins/claude-monitoring/web/src/**"],
-  "ignoreDependencies": ["@modelcontextprotocol/sdk"]
+  "ignore": [
+    "plugins/claude-monitoring/web/src/**",
+    "plugins/claude-monitoring/web/vite.config.ts",
+    "plugins/claude-monitoring/web/vitest.config.ts",
+    "plugins/claude-monitoring/shared/**"
+  ]
 }
