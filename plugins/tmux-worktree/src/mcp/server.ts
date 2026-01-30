@@ -52,10 +52,6 @@ const TOOL_DEFINITIONS = [
           enum: ["pr", "research", "docs"],
           description: "Type of task (default: 'pr'). Affects notification behavior.",
         },
-        pluginDir: {
-          type: "string",
-          description: "Temporary: Path to local plugin directory for testing",
-        },
       },
       required: ["branch"],
     },

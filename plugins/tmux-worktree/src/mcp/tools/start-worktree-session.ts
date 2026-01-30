@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createSpawnedWorker } from "../../db/index.js";
 import type { TaskType } from "../../db/types.js";
@@ -14,7 +14,6 @@ export interface StartWorktreeSessionArgs {
   prompt?: string;
   orchestratorId?: string;
   taskType?: TaskType;
-  pluginDir?: string; // Temporary: for local plugin testing
 }
 
 /**
@@ -45,7 +44,7 @@ function writeOrchestratorIdFile(worktreePath: string, orchestratorId: string): 
 export async function startWorktreeSession(
   args: StartWorktreeSessionArgs,
 ): Promise<CallToolResult> {
-  const { branch, fromRef, planMode, prompt, orchestratorId, taskType, pluginDir } = args;
+  const { branch, fromRef, planMode, prompt, orchestratorId, taskType } = args;
 
   // Validate branch parameter
   if (!branch || typeof branch !== "string") {
@@ -153,11 +152,8 @@ export async function startWorktreeSession(
 
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
-  // Always pass plugin directory so hooks are available in worker sessions
-  // Use provided pluginDir or auto-detect from current plugin location
-  // IMPORTANT: Always resolve to absolute path since worker runs in a different directory
-  const effectivePluginDir = pluginDir ? resolve(pluginDir) : getPluginRoot();
-  const pluginDirFlag = `--plugin-dir ${effectivePluginDir}`;
+  // Pass plugin directory so hooks are available in worker sessions
+  const pluginDirFlag = `--plugin-dir ${getPluginRoot()}`;
 
   if (prompt) {
     // Use base64 encoding to safely transfer prompts with special characters
