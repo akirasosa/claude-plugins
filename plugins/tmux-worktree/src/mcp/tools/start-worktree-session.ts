@@ -144,7 +144,7 @@ export async function startWorktreeSession(
 
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
-  const pluginDirFlag = pluginDir ? `--plugin-dir "${pluginDir}"` : "";
+  const pluginDirFlag = pluginDir ? `--plugin-dir '${pluginDir}'` : "";
 
   if (finalPrompt) {
     // Use base64 encoding to safely transfer prompts with newlines or special characters
