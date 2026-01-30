@@ -10,7 +10,6 @@ This plugin enables a powerful workflow for running multiple Claude Code session
 
 - **tmux**: Must be running inside a tmux session
 - **[git-gtr](https://github.com/coderabbitai/git-worktree-runner)**: Git worktree runner tool
-- **jq**: For JSON manipulation (used by start script)
 - **Claude Code**: Installed and configured
 
 ## Installation
@@ -25,34 +24,39 @@ claude plugin install tmux-worktree
 
 ## What it does
 
+- **MCP Server**: Provides `start_worktree_session` tool for creating worktrees
 - **SessionStart hook**: Auto-configures `gtr.hook.preRemove` via `git config --local` for tmux cleanup
 - **Command**: Provides Orchestrator Mode (`/orchestrator-mode`) for task delegation
 
-## Scripts
+## MCP Tool: `start_worktree_session`
 
-| Script | Description |
-|--------|-------------|
-| `start <branch> [prompt]` | Create worktree + open tmux window + start Claude Code |
-| `cleanup` | Kill tmux windows when removing worktree (preRemove hook) |
+Creates a git worktree and starts Claude Code in a new tmux window.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| branch | string | Yes | Branch name (e.g., `feat/add-feature`) |
+| fromRef | string | No | Base branch/ref to create worktree from |
+| planMode | boolean | No | Start Claude Code in plan mode (default: false) |
+| prompt | string | No | Initial prompt for Claude Code |
 
 ### Usage
 
-After installing the plugin, find the scripts in your plugin directory:
+After installing the plugin, use the MCP tool directly:
 
-```bash
-# Get plugin path
-PLUGIN_PATH=$(claude plugin path tmux-worktree)
-
-# Create worktree and start Claude Code
-$PLUGIN_PATH/scripts/start feat/add-feature
-$PLUGIN_PATH/scripts/start fix/bug "Fix the login bug"
-$PLUGIN_PATH/scripts/start --plan feat/new-feature "Implement new feature"
 ```
+mcp__tmux-worktree__start_worktree_session({
+  branch: "feat/add-feature",
+  planMode: true,
+  prompt: "Implement user authentication..."
+})
+```
+
+Or use the `/orchestrator-mode` command for a guided workflow.
 
 ## Workflow
 
 1. Start a tmux session in your main repository
-2. Use the `start` script to create a worktree and launch Claude Code
+2. Use the `start_worktree_session` MCP tool to create a worktree and launch Claude Code
 3. Work on multiple features in parallel across different tmux windows
 4. When done, use `git gtr rm <branch>` to clean up (tmux windows are auto-killed)
 
