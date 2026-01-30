@@ -1,3 +1,5 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { getMcpServersFromProject, updateClaudeConfig } from "../utils/claude-config.js";
 import { exec, execOrThrow } from "../utils/exec.js";
@@ -147,12 +149,16 @@ export async function startWorktreeSession(
   const pluginDirFlag = pluginDir ? `--plugin-dir '${pluginDir}'` : "";
 
   if (finalPrompt) {
-    // Use base64 encoding to safely transfer prompts with newlines or special characters
-    // macOS base64 adds line breaks every 76 chars, so remove them with tr -d '\n'
-    const encoded = Buffer.from(finalPrompt).toString("base64");
+    // Write prompt to a temp file in the worktree directory
+    // This avoids complex shell escaping issues with base64/command substitution
+    const promptFile = join(worktreePath, ".claude-worker-prompt.txt");
+    writeFileSync(promptFile, finalPrompt);
+
+    // Use single quotes around the entire command so the parent shell doesn't expand $(...)
+    // The target shell (fish/bash/zsh) will evaluate it when the command runs
     sendKeys(
       windowId,
-      `"claude ${planModeFlag} ${pluginDirFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`,
+      `'claude ${planModeFlag} ${pluginDirFlag} "$(cat .claude-worker-prompt.txt)"'`,
     );
   } else {
     sendKeys(windowId, `"claude ${planModeFlag} ${pluginDirFlag}"`);
