@@ -79,6 +79,37 @@ Include the following in your handoff prompt:
 6. **Expected output**: Deliverable format (PR, docs, etc.)
 ```
 
+## Testing
+
+This plugin requires tmux, git-gtr, and Claude Code for testing. Manual verification steps:
+
+### Prerequisites
+
+1. Start a tmux session: `tmux new -s test`
+2. Ensure git-gtr is installed: `git gtr --version`
+3. Install the plugin: `claude plugin install /path/to/tmux-worktree`
+
+### Manual Testing
+
+**Test MCP tool:**
+1. In Claude Code, invoke the tool:
+   ```
+   mcp__plugin_tmux-worktree_worktree__start_worktree_session({
+     branch: "test/manual-test",
+     planMode: true
+   })
+   ```
+2. Verify a new tmux window opens with Claude Code
+3. Verify the worktree is created: `git worktree list`
+
+**Test cleanup:**
+1. Remove the worktree: `git gtr rm test/manual-test`
+2. Verify the tmux window is automatically closed
+
+**Test SessionStart hook:**
+1. Start a new Claude Code session in the main repository
+2. Verify gtr hooks are configured: `git config --local --get gtr.hook.preRemove`
+
 ## Uninstalling
 
 ```bash
