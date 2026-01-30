@@ -1,15 +1,4 @@
 #!/usr/bin/env bun
-// Immediate debug log - before any imports
-import { appendFileSync } from "node:fs";
-
-const LOG_FILE = "/tmp/hook-debug.log";
-const log = (msg: string) => {
-  try {
-    appendFileSync(LOG_FILE, `${new Date().toISOString()} ${msg}\n`);
-  } catch {}
-};
-log("=== Hook script started ===");
-
 /**
  * PostToolUse hook: Detects gh pr create command and sends notification to orchestrator
  *
@@ -77,22 +66,10 @@ function getCurrentBranch(cwd: string): string | null {
 }
 
 async function main() {
-  const debugLog = (msg: string) => {
-    try {
-      appendFileSync("/tmp/detect-pr-completion-debug.log", `${new Date().toISOString()} ${msg}\n`);
-    } catch {}
-  };
-
   // Read hook payload from stdin
   const input = await Bun.stdin.text();
 
-  debugLog(`Input length: ${input.length}`);
-  if (input.length < 1000) {
-    debugLog(`Input: ${input}`);
-  }
-
   if (!input.trim()) {
-    debugLog("Empty input, exiting");
     process.exit(0);
   }
 
@@ -122,7 +99,6 @@ async function main() {
   // Note: Claude Code's tool_response may not include exit_code field
   // If exit_code is present and non-zero, the command failed
   if (exitCode !== undefined && exitCode !== 0) {
-    debugLog(`Command failed with exit code: ${exitCode}`);
     process.exit(0);
   }
 
