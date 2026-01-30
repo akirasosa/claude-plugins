@@ -156,9 +156,10 @@ export async function startWorktreeSession(
 
     // Use single quotes around the entire command so the parent shell doesn't expand $(...)
     // The target shell (fish/bash/zsh) will evaluate it when the command runs
+    // Use /bin/cat to avoid shell aliases (e.g., cat -> bat in fish)
     sendKeys(
       windowId,
-      `'claude ${planModeFlag} ${pluginDirFlag} "$(cat .claude-worker-prompt.txt)"'`,
+      `'claude ${planModeFlag} ${pluginDirFlag} "$(/bin/cat .claude-worker-prompt.txt)"'`,
     );
   } else {
     sendKeys(windowId, `"claude ${planModeFlag} ${pluginDirFlag}"`);
