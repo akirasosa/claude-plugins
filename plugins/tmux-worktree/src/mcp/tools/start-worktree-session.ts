@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, lstatSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createSpawnedWorker } from "../../db/database.js";
 import type { TaskType } from "../../db/types.js";
@@ -91,6 +91,19 @@ function configureWorkerHooks(worktreePath: string, pluginRoot: string): void {
 
   const settingsPath = join(claudeDir, "settings.local.json");
 
+  // If settings.local.json is a symlink, remove it first
+  // (we need to create a new file specific to this worktree)
+  if (existsSync(settingsPath)) {
+    try {
+      const stat = lstatSync(settingsPath);
+      if (stat.isSymbolicLink()) {
+        unlinkSync(settingsPath);
+      }
+    } catch {
+      // Ignore errors
+    }
+  }
+
   // Load existing settings or create new
   let settings: SettingsLocalJson = {};
   if (existsSync(settingsPath)) {
@@ -102,31 +115,34 @@ function configureWorkerHooks(worktreePath: string, pluginRoot: string): void {
     }
   }
 
+  // Ensure pluginRoot is an absolute path
+  const absolutePluginRoot = resolve(pluginRoot);
+
   // Initialize hooks if not exists
   if (!settings.hooks) {
     settings.hooks = {};
   }
 
-  // Add PostToolUse hook for PR detection
+  // Add PostToolUse hook for PR detection (use absolute path)
   settings.hooks.PostToolUse = [
     {
       matcher: "Bash",
       hooks: [
         {
           type: "command",
-          command: `bun run ${pluginRoot}/scripts/hooks/detect-pr-completion.ts`,
+          command: `bun run ${absolutePluginRoot}/scripts/hooks/detect-pr-completion.ts`,
         },
       ],
     },
   ];
 
-  // Add SessionEnd hook for session end detection
+  // Add SessionEnd hook for session end detection (use absolute path)
   settings.hooks.SessionEnd = [
     {
       hooks: [
         {
           type: "command",
-          command: `bun run ${pluginRoot}/scripts/hooks/detect-session-end.ts`,
+          command: `bun run ${absolutePluginRoot}/scripts/hooks/detect-session-end.ts`,
         },
       ],
     },
