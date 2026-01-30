@@ -2,13 +2,46 @@
 // Handles initialization and orchestration
 
 import "./styles/input.css";
+import "./components"; // Register Lit components
 import { getCleanupPreview, performCleanup } from "./api";
-import { renderEvents } from "./render";
+import type { EventRow } from "./components/event-row";
 import { connectSSE, getCurrentMode, setCurrentMode, setOnEventsCallback } from "./sse";
-import { initDb } from "./storage";
-import type { CleanupPreviewResponse, FilterMode } from "./types";
+import { getReadStatus, initDb } from "./storage";
+import type { CleanupPreviewResponse, EventResponse, FilterMode } from "./types";
 import { hideElement, showElement, showToast } from "./ui";
 import { escapeHtml } from "./utils";
+
+/**
+ * Render events using Lit components
+ */
+async function renderEvents(events: EventResponse[]): Promise<void> {
+  const table = document.getElementById("events-table");
+  const emptyState = document.getElementById("empty-state");
+  const tbody = document.getElementById("events-body");
+
+  if (!table || !emptyState || !tbody) return;
+
+  if (events.length === 0) {
+    hideElement(table);
+    showElement(emptyState);
+    return;
+  }
+
+  showElement(table);
+  hideElement(emptyState);
+
+  // Clear existing rows
+  tbody.innerHTML = "";
+
+  // Create event-row elements for each event
+  for (const event of events) {
+    const isRead = await getReadStatus(event.event_id);
+    const eventRow = document.createElement("event-row") as EventRow;
+    eventRow.event = event;
+    eventRow.isRead = isRead;
+    tbody.appendChild(eventRow);
+  }
+}
 
 // Filter mode state management
 
