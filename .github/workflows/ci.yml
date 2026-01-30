@@ -41,14 +41,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run Bun unit tests (server-side)
+      - name: Run unit tests
         run: cd plugins/claude-monitoring && bun test
-
-      - name: Install web dependencies
-        run: cd plugins/claude-monitoring/web && bun install --frozen-lockfile
-
-      - name: Run Bun unit tests (web)
-        run: cd plugins/claude-monitoring/web && bun test
 
   security-scan:
     name: Security Scan

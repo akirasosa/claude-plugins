@@ -13,11 +13,9 @@ import {
   migrate,
 } from "../src/db";
 
-// In dev mode (PORT=3848), Vite handles static files
-// In production (PORT=3847 or default), serve from dist/
 const DEFAULT_PORT = 3847;
-const PORT = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : DEFAULT_PORT;
-const STATIC_DIR = join(import.meta.dir, "dist");
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : DEFAULT_PORT;
+const PUBLIC_DIR = join(import.meta.dir, "public");
 
 // SSE clients
 interface SSEClient {
@@ -188,11 +186,11 @@ async function handleRequest(req: Request): Promise<Response> {
   // Static files
   let filePath: string;
   if (path === "/" || path === "/index.html") {
-    filePath = join(STATIC_DIR, "index.html");
+    filePath = join(PUBLIC_DIR, "index.html");
   } else if (path.startsWith("/static/")) {
-    filePath = join(STATIC_DIR, path.slice(8));
+    filePath = join(PUBLIC_DIR, path.slice(8));
   } else {
-    filePath = join(STATIC_DIR, path);
+    filePath = join(PUBLIC_DIR, path);
   }
 
   const file = Bun.file(filePath);
