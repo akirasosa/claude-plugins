@@ -24,11 +24,14 @@ claude plugin install tmux-worktree
 
 ## What it does
 
-- **MCP Server**: Provides `start_worktree_session` tool for creating worktrees
-- **SessionStart hook**: Auto-configures `gtr.hook.preRemove` via `git config --local` for tmux cleanup
+- **MCP Server**: Provides tools for worktree management and orchestrator-worker messaging
+- **SessionStart hook**: Auto-configures `gtr.hook.preRemove` for tmux cleanup
+- **PostToolUse hook**: Auto-detects `gh pr create` and notifies orchestrator
 - **Command**: Provides Orchestrator Mode (`/orchestrator-mode`) for task delegation
 
-## MCP Tool: `start_worktree_session`
+## MCP Tools
+
+### `start_worktree_session`
 
 Creates a git worktree and starts Claude Code in a new tmux window.
 
@@ -38,10 +41,25 @@ Creates a git worktree and starts Claude Code in a new tmux window.
 | fromRef | string | No | Base branch/ref to create worktree from |
 | planMode | boolean | No | Start Claude Code in plan mode (default: false) |
 | prompt | string | No | Initial prompt for Claude Code |
+| orchestratorId | string | No | Orchestrator session ID for auto-notifications |
 
-### Usage
+### `create_orchestrator_session`
 
-After installing the plugin, use the MCP tool directly:
+Creates an orchestrator session for coordinating worker tasks.
+
+### `poll_messages`
+
+Polls for unread messages from workers.
+
+### `get_orchestrator_status`
+
+Gets orchestrator status including unread message count.
+
+### `send_message`
+
+Sends a message from worker to orchestrator.
+
+## Usage
 
 ```
 mcp__plugin_tmux-worktree_worktree__start_worktree_session({
@@ -51,7 +69,7 @@ mcp__plugin_tmux-worktree_worktree__start_worktree_session({
 })
 ```
 
-Or use the `/orchestrator-mode` command for a guided workflow.
+Or use the `/orchestrator-mode` command for a guided workflow with automatic PR notifications.
 
 ## Workflow
 
@@ -59,25 +77,6 @@ Or use the `/orchestrator-mode` command for a guided workflow.
 2. Use the `start_worktree_session` MCP tool to create a worktree and launch Claude Code
 3. Work on multiple features in parallel across different tmux windows
 4. When done, use `git gtr rm <branch>` to clean up (tmux windows are auto-killed)
-
-## Tips
-
-Creating a `CLAUDE.local.md` file in your repository root can help streamline handoff prompts when delegating tasks to worktrees:
-
-```markdown
-Hand off your work to Claude Code on a separate worktree using tmux-worktree as soon as the task theme is identified. Generally, ensure that Claude Code is always running in plan mode.
-
-## Handoff Prompt Requirements
-
-Include the following in your handoff prompt:
-
-1. **Objective**: What needs to be accomplished
-2. **Context**: Why this task is needed
-3. **Findings**: What has been discovered so far
-4. **Relevant files**: Files to modify or reference
-5. **Decisions made**: What has already been decided
-6. **Expected output**: Deliverable format (PR, docs, etc.)
-```
 
 ## Note
 
