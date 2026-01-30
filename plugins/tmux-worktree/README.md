@@ -4,7 +4,7 @@ Git worktree workflow with tmux integration for parallel Claude Code sessions.
 
 ## Overview
 
-This plugin enables a powerful workflow for running multiple Claude Code sessions in parallel using git worktrees. Each worktree gets its own tmux window, allowing you to work on multiple features or fixes simultaneously.
+Delegate tasks to parallel Claude Code sessions running in separate git worktrees. When a worker creates a PR, the orchestrator is automatically notified.
 
 ## Prerequisites
 
@@ -15,72 +15,49 @@ This plugin enables a powerful workflow for running multiple Claude Code session
 ## Installation
 
 ```bash
-# Install plugin from local path
 claude plugin install /path/to/tmux-worktree
-
-# Or if published to a marketplace
-claude plugin install tmux-worktree
 ```
-
-## What it does
-
-- **MCP Server**: Provides tools for worktree management and orchestrator-worker messaging
-- **SessionStart hook**: Auto-configures `gtr.hook.preRemove` for tmux cleanup
-- **PostToolUse hook**: Auto-detects `gh pr create` and notifies orchestrator
-- **Command**: Provides Orchestrator Mode (`/orchestrator-mode`) for task delegation
-
-## MCP Tools
-
-### `start_worktree_session`
-
-Creates a git worktree and starts Claude Code in a new tmux window.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| branch | string | Yes | Branch name (e.g., `feat/add-feature`) |
-| fromRef | string | No | Base branch/ref to create worktree from |
-| planMode | boolean | No | Start Claude Code in plan mode (default: false) |
-| prompt | string | No | Initial prompt for Claude Code |
-| orchestratorId | string | No | Orchestrator session ID for auto-notifications |
-
-### `create_orchestrator_session`
-
-Creates an orchestrator session for coordinating worker tasks.
-
-### `poll_messages`
-
-Polls for unread messages from workers.
-
-### `get_orchestrator_status`
-
-Gets orchestrator status including unread message count.
-
-### `send_message`
-
-Sends a message from worker to orchestrator.
 
 ## Usage
 
 ```
-mcp__plugin_tmux-worktree_worktree__start_worktree_session({
-  branch: "feat/add-feature",
-  planMode: true,
-  prompt: "Implement user authentication..."
-})
+/orchestrator-mode
 ```
 
-Or use the `/orchestrator-mode` command for a guided workflow with automatic PR notifications.
+That's it. The orchestrator handles everything:
+1. Creates orchestrator session
+2. Starts background polling for notifications
+3. Delegates tasks to worker sessions in separate worktrees
+4. Receives automatic notification when workers create PRs
+5. Reviews and merges PRs
 
-## Workflow
+## How it works
 
-1. Start a tmux session in your main repository
-2. Use the `start_worktree_session` MCP tool to create a worktree and launch Claude Code
-3. Work on multiple features in parallel across different tmux windows
-4. When done, use `git gtr rm <branch>` to clean up (tmux windows are auto-killed)
+```
+You (human)
+    │
+    └─► /orchestrator-mode
+            │
+            ▼
+        Orchestrator (Claude)
+            │
+            ├─► Creates worktree + worker session
+            │
+            └─► Polls for messages
+                    ▲
+                    │ automatic notification
+                    │
+        Worker (Claude in worktree)
+            │
+            └─► gh pr create
+                    │
+                    ▼
+                PostToolUse hook detects PR → sends notification
+```
 
 ## Note
 
-When using orchestrator mode, the plugin creates `.claude/.orchestrator-id` in worktrees. Ensure your `.gitignore` includes `.claude/*` (with appropriate exceptions) to avoid committing this file.
+The plugin creates `.claude/.orchestrator-id` in worktrees. Ensure your `.gitignore` includes `.claude/*` (with appropriate exceptions) to avoid committing this file.
 
 ## Uninstalling
 
