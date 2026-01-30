@@ -10,10 +10,12 @@
     "noEmit": true,
     "types": ["bun-types"],
     "lib": ["ESNext", "DOM"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "paths": {
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src/**/*.ts", "server.ts", "vite.config.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "server.ts", "vite.config.ts"],
   "exclude": ["node_modules"]
 }

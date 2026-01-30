@@ -13,8 +13,11 @@
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage"
   },
-  "dependencies": {},
+  "dependencies": {
+    "preact": "^10.25.4"
+  },
   "devDependencies": {
+    "@preact/preset-vite": "^2.9.4",
     "@happy-dom/global-registrator": "^16.6.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/bun": "latest",
