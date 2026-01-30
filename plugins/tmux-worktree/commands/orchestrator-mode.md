@@ -3,7 +3,7 @@ description: Orchestrator mode for delegating tasks to parallel Claude Code sess
 allowed-tools:
   - Bash
   - Task
-  - mcp__tmux-worktree__start_worktree_session
+  - mcp__plugin_tmux-worktree_worktree__start_worktree_session
 ---
 
 # Orchestrator Mode
@@ -60,7 +60,7 @@ Delegate **any task** where the theme is identifiable:
 
 ### Start Worktree Session (via MCP tool)
 
-Use the `mcp__tmux-worktree__start_worktree_session` tool:
+Use the `mcp__plugin_tmux-worktree_worktree__start_worktree_session` tool:
 
 | Parameter | Description |
 |-----------|-------------|
@@ -73,21 +73,21 @@ Use the `mcp__tmux-worktree__start_worktree_session` tool:
 
 ```
 # Implementation task
-mcp__tmux-worktree__start_worktree_session({
+mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-auth",
   planMode: true,
   prompt: "Objective: Add user authentication..."
 })
 
 # Research task
-mcp__tmux-worktree__start_worktree_session({
+mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "research/skill-visibility",
   planMode: true,
   prompt: "Objective: Research why plugin skills don't appear in slash commands..."
 })
 
 # From a specific base branch
-mcp__tmux-worktree__start_worktree_session({
+mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-metrics",
   fromRef: "develop",
   planMode: true,
@@ -148,7 +148,7 @@ This automatically cleans up the tmux window via the preRemove hook.
 
 | Action | Tool/Command |
 |--------|--------------|
-| Create worktree | `mcp__tmux-worktree__start_worktree_session` |
+| Create worktree | `mcp__plugin_tmux-worktree_worktree__start_worktree_session` |
 | List PRs | `gh pr list` |
 | View PR | `gh pr view <number>` |
 | Merge PR | `gh pr merge <number> --squash` |

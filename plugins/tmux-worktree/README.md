@@ -44,7 +44,7 @@ Creates a git worktree and starts Claude Code in a new tmux window.
 After installing the plugin, use the MCP tool directly:
 
 ```
-mcp__tmux-worktree__start_worktree_session({
+mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-feature",
   planMode: true,
   prompt: "Implement user authentication..."
