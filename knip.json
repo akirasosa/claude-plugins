@@ -21,7 +21,7 @@
       "entry": ["src/app.ts", "src/test/setup.ts", "**/*.test.ts"],
       "project": ["src/**/*.ts"],
       "ignoreDependencies": ["tailwindcss"],
-      "ignore": ["src/sse.ts", "src/ui.ts", "src/types.ts"]
+      "ignore": ["src/sse.ts", "src/ui.ts", "src/types.ts", "src/components/*.ts"]
     },
     "plugins/tmux-worktree": {
       "entry": ["src/ensure-gtrconfig.ts"],

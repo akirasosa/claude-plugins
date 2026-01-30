@@ -14,7 +14,8 @@
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
-    "hono": "^4.7.0"
+    "hono": "^4.7.0",
+    "lit": "^3.3.2"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^20.0.0",

@@ -2,13 +2,39 @@
 // Handles initialization and orchestration
 
 import "./styles/input.css";
+import "./components"; // Register Lit components
 import { getCleanupPreview, performCleanup } from "./api";
-import { renderEvents } from "./render";
+import type { EventsTable } from "./components";
 import { connectSSE, getCurrentMode, setCurrentMode, setOnEventsCallback } from "./sse";
 import { initDb } from "./storage";
-import type { CleanupPreviewResponse, FilterMode } from "./types";
+import type { CleanupPreviewResponse, EventResponse, FilterMode } from "./types";
 import { hideElement, showElement, showToast } from "./ui";
 import { escapeHtml } from "./utils";
+
+/**
+ * Render events using Lit component
+ */
+function renderEvents(events: EventResponse[]): void {
+  const table = document.getElementById("events-table");
+  const emptyState = document.getElementById("empty-state");
+  const eventsTableComponent = document.getElementById(
+    "events-table-component",
+  ) as EventsTable | null;
+
+  if (!table || !emptyState || !eventsTableComponent) return;
+
+  if (events.length === 0) {
+    hideElement(table);
+    showElement(emptyState);
+    return;
+  }
+
+  showElement(table);
+  hideElement(emptyState);
+
+  // Update Lit component's events property
+  eventsTableComponent.events = events;
+}
 
 // Filter mode state management
 

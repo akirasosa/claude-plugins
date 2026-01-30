@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
