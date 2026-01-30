@@ -1,3 +1,8 @@
+// Re-export shared types
+export type { EventResponse, FilterMode } from "../shared/types";
+
+// Server-only types
+
 export interface Event {
   id: number;
   event_id: string;
@@ -10,21 +15,6 @@ export interface Event {
   tmux_window_id: string | null;
   git_branch: string | null;
 }
-
-export interface EventResponse {
-  id: number;
-  event_id: string;
-  session_id: string;
-  event_type: string;
-  created_at: string;
-  project_name: string;
-  git_branch: string | null;
-  summary: string;
-  tmux_command: string | null;
-  tmux_window_id: string | null;
-}
-
-export type FilterMode = "waiting" | "active" | "all";
 
 export interface EventInput {
   session_id?: string;
