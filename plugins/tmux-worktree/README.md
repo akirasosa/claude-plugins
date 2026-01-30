@@ -79,6 +79,25 @@ Include the following in your handoff prompt:
 6. **Expected output**: Deliverable format (PR, docs, etc.)
 ```
 
+## Testing
+
+### Manual Testing
+
+1. **Verify tmux requirement**: Run Claude Code outside tmux - the MCP tool should fail gracefully
+2. **Test worktree creation**: Use the MCP tool to create a worktree and verify:
+   - New tmux window is created
+   - Claude Code starts in the worktree directory
+   - Git worktree is properly set up (`git worktree list`)
+3. **Test cleanup**: Remove worktree with `git gtr rm <branch>` and verify tmux window is killed
+
+### Automated Tests
+
+This plugin currently has no automated tests. To add tests, create `*.test.ts` files and run:
+
+```bash
+cd plugins/tmux-worktree && bun test
+```
+
 ## Uninstalling
 
 ```bash
