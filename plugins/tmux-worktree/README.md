@@ -79,6 +79,48 @@ Include the following in your handoff prompt:
 6. **Expected output**: Deliverable format (PR, docs, etc.)
 ```
 
+## Testing
+
+### Code Quality Checks
+
+Run from the repository root:
+
+```bash
+# Lint and format check
+bun run lint
+
+# Type checking
+bun run typecheck
+```
+
+### Manual Testing
+
+This plugin requires tmux and git-gtr for full functionality. To test:
+
+1. **Prerequisites**
+   - Running inside a tmux session
+   - git-gtr installed (`brew install coderabbitai/tap/gtr`)
+   - Claude Code installed
+
+2. **MCP Server**
+   ```bash
+   # Start the MCP server directly
+   bun run plugins/tmux-worktree/src/mcp/server.ts
+   ```
+
+3. **Plugin Installation**
+   ```bash
+   # Install plugin for testing
+   claude plugin install ./plugins/tmux-worktree
+
+   # Or run with plugin directory
+   claude --plugin-dir ./plugins/tmux-worktree
+   ```
+
+4. **Verify MCP Tool**
+   - Use `start_worktree_session` tool in Claude Code
+   - Check that a new tmux window is created with Claude Code running
+
 ## Uninstalling
 
 ```bash
