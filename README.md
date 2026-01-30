@@ -26,12 +26,13 @@ claude plugin install tmux-worktree
 
 ## Web UI (Optional)
 
-Download binary from [Releases](https://github.com/akirasosa/claude-plugins/releases) and run:
-
 ```bash
-chmod +x claude-monitoring-darwin-arm64
-./claude-monitoring-darwin-arm64  # starts on port 3847
+git clone https://github.com/akirasosa/claude-plugins
+cd claude-plugins && bun install
+bun run --cwd plugins/claude-monitoring/web start  # starts on port 3847
 ```
+
+Or download pre-built binary from [Releases](https://github.com/akirasosa/claude-plugins/releases).
 
 ## Tips
 
