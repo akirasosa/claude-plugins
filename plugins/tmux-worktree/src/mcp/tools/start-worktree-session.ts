@@ -1,5 +1,5 @@
 import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createSpawnedWorker } from "../../db/database.js";
 import type { TaskType } from "../../db/types.js";
@@ -191,7 +191,8 @@ export async function startWorktreeSession(
   const planModeFlag = planMode ? "--permission-mode plan" : "";
   // Always pass plugin directory so hooks are available in worker sessions
   // Use provided pluginDir or auto-detect from current plugin location
-  const effectivePluginDir = pluginDir || getPluginRoot();
+  // IMPORTANT: Always resolve to absolute path since worker runs in a different directory
+  const effectivePluginDir = pluginDir ? resolve(pluginDir) : getPluginRoot();
   const pluginDirFlag = `--plugin-dir ${effectivePluginDir}`;
 
   // Debug: Log the plugin directory being used
