@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createSpawnedWorker } from "../../db/database.js";
 import type { TaskType } from "../../db/types.js";
@@ -45,6 +45,15 @@ Branch: ${branch}
 ---
 
 `;
+}
+
+/**
+ * Gets the plugin root directory (where plugin.json is located)
+ * This file is at src/mcp/tools/start-worktree-session.ts
+ * Plugin root is 3 levels up
+ */
+function getPluginRoot(): string {
+  return dirname(dirname(dirname(import.meta.dir)));
 }
 
 /**
@@ -180,8 +189,10 @@ export async function startWorktreeSession(
 
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
-  // Note: pluginDir should not contain spaces or special characters
-  const pluginDirFlag = pluginDir ? `--plugin-dir ${pluginDir}` : "";
+  // Always pass plugin directory so hooks are available in worker sessions
+  // Use provided pluginDir or auto-detect from current plugin location
+  const effectivePluginDir = pluginDir || getPluginRoot();
+  const pluginDirFlag = `--plugin-dir ${effectivePluginDir}`;
 
   if (finalPrompt) {
     // Use base64 encoding to safely transfer prompts with special characters
