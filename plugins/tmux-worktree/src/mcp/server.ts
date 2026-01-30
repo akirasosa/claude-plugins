@@ -41,10 +41,7 @@ const TOOL_DEFINITIONS = [
   },
 ];
 
-const server = new Server(
-  { name: "tmux-worktree", version: "2.0.0" },
-  { capabilities: { tools: {} } },
-);
+const server = new Server({ name: "worktree", version: "3.0.0" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOL_DEFINITIONS,
