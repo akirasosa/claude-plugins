@@ -68,7 +68,15 @@ function getCurrentBranch(cwd: string): string | null {
 async function main() {
   // Read hook payload from stdin
   const input = await Bun.stdin.text();
+
+  // Debug: log input to stderr (visible in hook output)
+  console.error(`[detect-pr-completion] Input length: ${input.length}`);
+  if (input.length < 500) {
+    console.error(`[detect-pr-completion] Input: ${input}`);
+  }
+
   if (!input.trim()) {
+    console.error("[detect-pr-completion] Empty input, exiting");
     process.exit(0);
   }
 
