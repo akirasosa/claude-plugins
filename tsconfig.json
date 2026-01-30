@@ -12,5 +12,5 @@
     "lib": ["ESNext", "DOM"]
   },
   "include": ["plugins/**/*.ts"],
-  "exclude": ["node_modules", "**/node_modules"]
+  "exclude": ["node_modules", "**/node_modules", "plugins/claude-monitoring/web/**"]
 }
