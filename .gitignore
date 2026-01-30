@@ -5,6 +5,10 @@ node_modules/
 # Generated frontend bundles (Vite output)
 plugins/claude-monitoring/web/dist/
 
+# Generated binary artifacts
+plugins/claude-monitoring/web/bin/
+plugins/claude-monitoring/web/embed.generated.ts
+
 # Claude Code - ignore user-specific files but track shared config
 .claude/*
 !.claude/CLAUDE.md
