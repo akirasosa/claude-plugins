@@ -20,6 +20,12 @@ export class EventRow extends LitElement {
     return this;
   }
 
+  connectedCallback() {
+    super.connectedCallback();
+    // Make this element invisible to table layout, so tr can be direct child of tbody
+    this.style.display = "contents";
+  }
+
   private async handleCopy() {
     if (!this.event.tmux_command) return;
 
