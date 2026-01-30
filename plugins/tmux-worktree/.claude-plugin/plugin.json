@@ -1,6 +1,6 @@
 {
   "name": "tmux-worktree",
-  "version": "1.9.1",
+  "version": "2.0.0",
   "description": "Git worktree workflow with tmux integration for parallel Claude Code sessions",
   "hooks": {
     "SessionStart": [
@@ -13,5 +13,11 @@
         ]
       }
     ]
+  },
+  "mcpServers": {
+    "tmux-worktree": {
+      "command": "bun",
+      "args": ["run", "${CLAUDE_PLUGIN_ROOT}/src/mcp/server.ts"]
+    }
   }
 }
