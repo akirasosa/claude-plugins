@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createSpawnedWorker } from "../../db/database.js";
@@ -194,16 +194,28 @@ export async function startWorktreeSession(
   const effectivePluginDir = pluginDir || getPluginRoot();
   const pluginDirFlag = `--plugin-dir ${effectivePluginDir}`;
 
+  // Debug: Log the plugin directory being used
+  const debugInfo = `[start-worktree-session] effectivePluginDir: ${effectivePluginDir}, getPluginRoot(): ${getPluginRoot()}, import.meta.dir: ${import.meta.dir}`;
+  console.error(debugInfo);
+  appendFileSync("/tmp/start-worktree-debug.log", `${new Date().toISOString()} ${debugInfo}\n`);
+
   if (finalPrompt) {
     // Use base64 encoding to safely transfer prompts with special characters
     // IMPORTANT: Prompt must come BEFORE --plugin-dir flag for Claude to receive it
     const encoded = Buffer.from(finalPrompt).toString("base64");
-    sendKeys(
-      windowId,
-      `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\" ${pluginDirFlag}"`,
+    const cmd = `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\" ${pluginDirFlag}"`;
+    appendFileSync(
+      "/tmp/start-worktree-debug.log",
+      `${new Date().toISOString()} sendKeys cmd: ${cmd}\n`,
     );
+    sendKeys(windowId, cmd);
   } else {
-    sendKeys(windowId, `"claude ${planModeFlag} ${pluginDirFlag}"`);
+    const cmd = `"claude ${planModeFlag} ${pluginDirFlag}"`;
+    appendFileSync(
+      "/tmp/start-worktree-debug.log",
+      `${new Date().toISOString()} sendKeys cmd: ${cmd}\n`,
+    );
+    sendKeys(windowId, cmd);
   }
 
   return {
