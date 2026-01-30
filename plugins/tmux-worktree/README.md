@@ -79,6 +79,14 @@ Include the following in your handoff prompt:
 6. **Expected output**: Deliverable format (PR, docs, etc.)
 ```
 
+## Testing
+
+```bash
+cd plugins/tmux-worktree && bun test
+```
+
+*Note: Tests are not yet implemented for this plugin.*
+
 ## Uninstalling
 
 ```bash
