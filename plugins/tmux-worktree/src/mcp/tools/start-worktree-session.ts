@@ -149,10 +149,11 @@ export async function startWorktreeSession(
 
   if (finalPrompt) {
     // Use base64 encoding to safely transfer prompts with special characters
+    // IMPORTANT: Prompt must come BEFORE --plugin-dir flag for Claude to receive it
     const encoded = Buffer.from(finalPrompt).toString("base64");
     sendKeys(
       windowId,
-      `"claude ${planModeFlag} ${pluginDirFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`,
+      `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\" ${pluginDirFlag}"`,
     );
   } else {
     sendKeys(windowId, `"claude ${planModeFlag} ${pluginDirFlag}"`);
