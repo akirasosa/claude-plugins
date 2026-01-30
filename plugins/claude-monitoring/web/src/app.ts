@@ -336,7 +336,10 @@ function buildEventRow(event: EventResponse, isRead: boolean): string {
         <span class="time">${formatTime(event.created_at)}</span>
       </td>
       <td class="col-summary">
-        <span class="summary" title="${escapeHtml(event.summary)}">${escapeHtml(event.summary)}</span>
+        <div class="summary-wrapper">
+          <span class="summary" title="${escapeHtml(event.summary)}">${escapeHtml(event.summary)}</span>
+          ${isAiSummary(event.summary) ? '<span class="ai-indicator" title="AI-generated summary">✨</span>' : ""}
+        </div>
       </td>
       <td class="col-copy">${copyButton}</td>
       <td class="col-actions">
@@ -583,6 +586,13 @@ function showCleanupModal(preview: CleanupPreviewResponse): void {
 
 function hideCleanupModal(): void {
   hideElement(document.getElementById("cleanup-modal"));
+}
+
+// AI Summary detection
+const DEFAULT_SUMMARIES = ["Task completed", "Waiting for input"];
+
+function isAiSummary(summary: string): boolean {
+  return !DEFAULT_SUMMARIES.includes(summary);
 }
 
 // Initialize

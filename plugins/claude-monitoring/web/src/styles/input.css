@@ -353,6 +353,20 @@
   @apply outline-2 outline-accent-blue outline-offset-2;
 }
 
+/* AI Summary indicator */
+.summary-wrapper {
+  @apply flex items-center gap-1.5 min-w-0;
+}
+
+.ai-indicator {
+  @apply shrink-0 text-accent-yellow cursor-help;
+  font-size: 0.875rem;
+}
+
+.ai-indicator[title] {
+  /* Ensure tooltip works */
+}
+
 /* Hidden utility */
 .hidden {
   display: none !important;
