@@ -2,6 +2,10 @@
 
 A collection of plugins for Claude Code.
 
+## Prerequisites
+
+- [Bun](https://bun.sh/) - Required to run plugin scripts
+
 ## Quick Start
 
 ```bash
@@ -15,10 +19,10 @@ claude plugin install tmux-worktree
 
 ## Available Plugins
 
-| Plugin | Description |
-|--------|-------------|
-| [claude-monitoring](./plugins/claude-monitoring/) | Event monitoring with desktop notifications and DB logging |
-| [tmux-worktree](./plugins/tmux-worktree/) | Git worktree workflow with tmux integration |
+| Plugin | Description | Requirements |
+|--------|-------------|--------------|
+| [claude-monitoring](./plugins/claude-monitoring/) | Event monitoring with desktop notifications and DB logging | - |
+| [tmux-worktree](./plugins/tmux-worktree/) | Git worktree workflow with tmux integration | tmux, [git-worktree-runner](https://github.com/coderabbitai/git-worktree-runner) |
 
 ## Web UI (Optional)
 
@@ -30,8 +34,6 @@ chmod +x claude-monitoring-darwin-arm64
 ```
 
 ## Tips
-
-**tmux-worktree**: Must run inside tmux. Requires [git-worktree-runner](https://github.com/coderabbitai/git-worktree-runner).
 
 **Serena users**: Include `.serena` in worktrees: `git config --global --add gtr.copy.includeDirs .serena`
 
