@@ -44,8 +44,10 @@ const mockIndexedDBOpen = vi.fn(() => {
   return request;
 });
 
-vi.stubGlobal("indexedDB", {
-  open: mockIndexedDBOpen,
+// Use globalThis assignment instead of vi.stubGlobal for better compatibility
+Object.defineProperty(globalThis, "indexedDB", {
+  value: { open: mockIndexedDBOpen },
+  writable: true,
 });
 
 // Mock EventSource
@@ -91,11 +93,17 @@ class MockEventSource {
   }
 }
 
-vi.stubGlobal("EventSource", MockEventSource);
+Object.defineProperty(globalThis, "EventSource", {
+  value: MockEventSource,
+  writable: true,
+});
 
 // Mock fetch for API calls
 const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+Object.defineProperty(globalThis, "fetch", {
+  value: mockFetch,
+  writable: true,
+});
 
 // Export mocks for test access
 export { MockEventSource, mockFetch, mockIndexedDBOpen };
