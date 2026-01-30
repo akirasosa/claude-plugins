@@ -119,7 +119,10 @@ async function main() {
   }
 
   // Check if command succeeded
-  if (exitCode !== 0) {
+  // Note: Claude Code's tool_response may not include exit_code field
+  // If exit_code is present and non-zero, the command failed
+  if (exitCode !== undefined && exitCode !== 0) {
+    debugLog(`Command failed with exit code: ${exitCode}`);
     process.exit(0);
   }
 
