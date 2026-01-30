@@ -1,5 +1,7 @@
 ---
-paths: plugins/**/*.ts
+paths:
+  - plugins/**/*.ts
+  - plugins/**/*.tsx
 ---
 
 # TypeScript Conventions
