@@ -41,7 +41,7 @@ const TOOL_DEFINITIONS = [
   },
 ];
 
-const server = new Server({ name: "worktree", version: "2.1.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "worktree", version: "3.0.0" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOL_DEFINITIONS,
