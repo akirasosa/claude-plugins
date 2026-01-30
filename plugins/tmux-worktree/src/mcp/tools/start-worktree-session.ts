@@ -31,7 +31,6 @@ You are running as a WORKER session spawned by an orchestrator (ID: ${orchestrat
 
 **Automatic notifications are enabled:**
 - When you create a PR using \`gh pr create\`, the orchestrator will be automatically notified.
-- When your session ends, the orchestrator will be notified.
 
 **For manual notification (e.g., research tasks without PR):**
 \`\`\`

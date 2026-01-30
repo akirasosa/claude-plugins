@@ -36,7 +36,6 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate ALL tasks—im
 │  - Executes the task (implementation, research, etc.)       │
 │  - Creates pull request                                     │
 │  - PostToolUse hook detects `gh pr create` → auto-notifies  │
-│  - SessionEnd hook notifies if session ends without PR      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -46,9 +45,8 @@ When you pass `orchestratorId` to `start_worktree_session`, the system automatic
 
 1. **Records the worker** in a tracking database
 2. **Creates `.claude/.orchestrator-id`** file in the worktree
-3. **Configures hooks** in the worktree's `settings.local.json`:
+3. **Configures hooks** via the plugin:
    - **PostToolUse hook**: Detects `gh pr create` commands and sends completion notification
-   - **SessionEnd hook**: Notifies if the session ends without creating a PR
 
 This means **workers don't need to manually call `send_message`**—notifications happen automatically!
 
@@ -263,7 +261,6 @@ This tool automatically reads the orchestrator ID from `.claude/.orchestrator-id
 - **Initialize first**: Always call `create_orchestrator_session` and start polling before delegating
 - **Always pass `orchestratorId`**: This enables automatic notification hooks
 - **Automatic PR detection**: When a worker runs `gh pr create`, the orchestrator is notified automatically
-- **Session end detection**: If a worker session ends without creating a PR, you'll be notified
 - Always use `planMode: true` when starting worker sessions
 - Workers should create PRs, not push directly to main
 - Review PRs before merging, even if briefly

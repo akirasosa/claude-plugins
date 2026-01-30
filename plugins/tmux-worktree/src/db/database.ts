@@ -221,15 +221,6 @@ export function createSpawnedWorker(input: CreateSpawnedWorkerInput): SpawnedWor
   }
 }
 
-export function getSpawnedWorkerByPath(worktreePath: string): SpawnedWorker | null {
-  return withReadOnlyDb((db) => {
-    const result = db
-      .query("SELECT * FROM spawned_workers WHERE worktree_path = ? AND status = 'active'")
-      .get(worktreePath) as SpawnedWorker | null;
-    return result;
-  }, null);
-}
-
 export function updateSpawnedWorkerStatus(
   worktreePath: string,
   status: WorkerStatus,
