@@ -8,7 +8,9 @@ IMPORTANT: All content in this repository MUST be in English. This includes code
 
 ## Project Structure
 
-- Multi-plugin monorepo under `plugins/`
+- Multi-plugin monorepo under `plugins/` using Bun workspaces
+- Single `bun install` at root installs all workspace dependencies
+- Single root `bun.lock` consolidates all dependencies
 - Each plugin has `.claude-plugin/plugin.json` manifest
 - Plugins integrate via Claude Code hooks: SessionStart, Stop, Notification, SessionEnd
 - `${CLAUDE_PLUGIN_ROOT}` substituted at runtime for plugin paths

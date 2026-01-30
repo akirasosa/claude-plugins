@@ -2,21 +2,30 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "workspaces": {
     ".": {
+      "entry": [],
+      "project": [],
+      "ignoreDependencies": ["@modelcontextprotocol/sdk"]
+    },
+    "plugins/claude-monitoring": {
       "entry": [
-        "plugins/claude-monitoring/src/cli.ts",
-        "plugins/claude-monitoring/src/db/index.ts",
-        "plugins/claude-monitoring/src/notification/index.ts",
-        "plugins/tmux-worktree/src/ensure-gtrconfig.ts",
-        "plugins/tmux-worktree/src/mcp/server.ts",
-        "plugins/**/*.test.ts"
+        "src/cli.ts",
+        "src/db/index.ts",
+        "src/notification/index.ts",
+        "shared/types.ts",
+        "**/*.test.ts"
       ],
-      "project": ["plugins/**/*.ts"],
-      "ignore": ["plugins/claude-monitoring/web/**", "plugins/claude-monitoring/shared/**"]
+      "project": ["src/**/*.ts", "shared/**/*.ts"]
     },
     "plugins/claude-monitoring/web": {
-      "project": ["**/*.ts"],
-      "ignore": ["src/**", "vite.config.ts"],
-      "vite": false
+      "vite": true,
+      "entry": ["src/app.ts", "src/test/setup.ts", "**/*.test.ts"],
+      "project": ["src/**/*.ts"],
+      "ignoreDependencies": ["tailwindcss"],
+      "ignore": ["src/sse.ts", "src/ui.ts", "src/types.ts"]
+    },
+    "plugins/tmux-worktree": {
+      "entry": ["src/ensure-gtrconfig.ts"],
+      "project": ["src/**/*.ts"]
     }
   }
 }
