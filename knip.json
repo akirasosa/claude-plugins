@@ -6,8 +6,10 @@
     "plugins/claude-monitoring/src/db/index.ts",
     "plugins/claude-monitoring/src/notification/index.ts",
     "plugins/tmux-worktree/src/ensure-gtrconfig.ts",
+    "plugins/tmux-worktree/src/mcp/server.ts",
     "plugins/**/*.test.ts"
   ],
   "project": ["plugins/**/*.ts"],
-  "ignore": ["plugins/claude-monitoring/web/src/**"]
+  "ignore": ["plugins/claude-monitoring/web/src/**"],
+  "ignoreDependencies": ["@modelcontextprotocol/sdk"]
 }

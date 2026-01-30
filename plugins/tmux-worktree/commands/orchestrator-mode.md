@@ -3,6 +3,7 @@ description: Orchestrator mode for delegating tasks to parallel Claude Code sess
 allowed-tools:
   - Bash
   - Task
+  - mcp__tmux-worktree__start_worktree_session
 ---
 
 # Orchestrator Mode
@@ -57,20 +58,44 @@ Delegate **any task** where the theme is identifiable:
 
 **Key principle**: If you can identify what the user wants to accomplish, delegate it. Don't execute it yourself.
 
-### Start Script
+### Start Worktree Session (via MCP tool)
 
-```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/start --plan <branch> "<handoff prompt>"
+Use the `mcp__tmux-worktree__start_worktree_session` tool:
 
-# Implementation examples
-${CLAUDE_PLUGIN_ROOT}/scripts/start --plan feat/add-auth "Objective: Add user authentication..."
-${CLAUDE_PLUGIN_ROOT}/scripts/start --plan fix/login-bug "Objective: Fix the login timeout issue..."
+| Parameter | Description |
+|-----------|-------------|
+| branch | Branch name (required) |
+| planMode | true for plan mode (default: false) |
+| prompt | Initial prompt for Claude Code |
+| fromRef | Base branch to create from |
 
-# Research examples
-${CLAUDE_PLUGIN_ROOT}/scripts/start --plan research/skill-visibility "Objective: Research why plugin skills don't appear in slash commands. Search the web thoroughly, check Claude Code documentation, and compile findings..."
+**Examples:**
+
+```
+# Implementation task
+mcp__tmux-worktree__start_worktree_session({
+  branch: "feat/add-auth",
+  planMode: true,
+  prompt: "Objective: Add user authentication..."
+})
+
+# Research task
+mcp__tmux-worktree__start_worktree_session({
+  branch: "research/skill-visibility",
+  planMode: true,
+  prompt: "Objective: Research why plugin skills don't appear in slash commands..."
+})
+
+# From a specific base branch
+mcp__tmux-worktree__start_worktree_session({
+  branch: "feat/add-metrics",
+  fromRef: "develop",
+  planMode: true,
+  prompt: "Objective: Add metrics collection..."
+})
 ```
 
-This creates a worktree, opens a new tmux window, and starts Claude Code in plan mode.
+This creates a worktree, opens a new tmux window, and starts Claude Code.
 
 ## Phase 2: PR Review and Merge
 
@@ -121,9 +146,9 @@ This automatically cleans up the tmux window via the preRemove hook.
 
 ## Quick Reference
 
-| Action | Command |
-|--------|---------|
-| Create worktree | `${CLAUDE_PLUGIN_ROOT}/scripts/start --plan <branch> "<prompt>"` |
+| Action | Tool/Command |
+|--------|--------------|
+| Create worktree | `mcp__tmux-worktree__start_worktree_session` |
 | List PRs | `gh pr list` |
 | View PR | `gh pr view <number>` |
 | Merge PR | `gh pr merge <number> --squash` |
@@ -133,7 +158,7 @@ This automatically cleans up the tmux window via the preRemove hook.
 
 ## Important Notes
 
-- Always use `--plan` flag when starting worker sessions
+- Always use `planMode: true` when starting worker sessions
 - Workers should create PRs, not push directly to main
 - Review PRs before merging, even if briefly
 - Clean up worktrees after merging to avoid clutter
