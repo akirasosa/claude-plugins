@@ -182,7 +182,7 @@ This creates a worktree, opens a new tmux window, and starts Claude Code.
 
 ## Phase 2: PR Review and Merge
 
-When the user returns saying a PR is ready:
+When notified that a PR is ready:
 
 1. **List open PRs**
    ```bash
@@ -200,13 +200,18 @@ When the user returns saying a PR is ready:
    - Verify the objective was met
    - Look for obvious issues
 
-4. **Merge if acceptable**
+4. **Report findings and ASK the user**
+   - Summarize the PR changes to the user
+   - **ALWAYS ask the user for confirmation before merging**
+   - Do NOT merge automatically—wait for explicit user approval
+
+5. **Merge only after user approval**
    ```bash
    gh pr merge <number> --squash
    ```
    Note: Do NOT use `--delete-branch` here. The worktree still references the branch.
 
-5. **Update main branch**
+6. **Update main branch**
    ```bash
    git fetch origin && git pull origin main
    ```
@@ -263,7 +268,7 @@ This tool automatically reads the orchestrator ID from `.claude/.orchestrator-id
 - **Automatic PR detection**: When a worker runs `gh pr create`, the orchestrator is notified automatically
 - Always use `planMode: true` when starting worker sessions
 - Workers should create PRs, not push directly to main
-- Review PRs before merging, even if briefly
+- Review PRs and ask user before merging
 - Clean up worktrees after merging to avoid clutter
 - The orchestrator session stays on the main branch
 - **Delegate research tasks too**—don't execute WebSearch or exploration yourself

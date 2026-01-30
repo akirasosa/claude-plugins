@@ -18,35 +18,6 @@ export interface StartWorktreeSessionArgs {
 }
 
 /**
- * Generates notification instructions for worker sessions
- * Note: This is supplementary - hooks in plugin.json handle automatic notification
- */
-function buildOrchestratorInstructions(orchestratorId: string, branch: string): string {
-  return `
-
----
-## Worker Session Info
-
-You are running as a WORKER session spawned by an orchestrator (ID: ${orchestratorId}).
-
-**Automatic notifications are enabled:**
-- When you create a PR using \`gh pr create\`, the orchestrator will be automatically notified.
-
-**For manual notification (e.g., research tasks without PR):**
-\`\`\`
-mcp__plugin_tmux-worktree_worktree__send_completion({
-  summary: "Brief description of what was done",
-  details: "Optional detailed findings..."
-})
-\`\`\`
-
-Branch: ${branch}
----
-
-`;
-}
-
-/**
  * Gets the plugin root directory (where plugin.json is located)
  * This file is at src/mcp/tools/start-worktree-session.ts
  * Plugin root is 3 levels up
@@ -180,12 +151,6 @@ export async function startWorktreeSession(
   // Wait for shell initialization
   await waitForShellInit();
 
-  // Build the final prompt, optionally adding orchestrator instructions
-  let finalPrompt = prompt || "";
-  if (orchestratorId) {
-    finalPrompt = finalPrompt + buildOrchestratorInstructions(orchestratorId, branch);
-  }
-
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
   // Always pass plugin directory so hooks are available in worker sessions
@@ -194,10 +159,10 @@ export async function startWorktreeSession(
   const effectivePluginDir = pluginDir ? resolve(pluginDir) : getPluginRoot();
   const pluginDirFlag = `--plugin-dir ${effectivePluginDir}`;
 
-  if (finalPrompt) {
+  if (prompt) {
     // Use base64 encoding to safely transfer prompts with special characters
     // IMPORTANT: Prompt must come BEFORE --plugin-dir flag for Claude to receive it
-    const encoded = Buffer.from(finalPrompt).toString("base64");
+    const encoded = Buffer.from(prompt).toString("base64");
     sendKeys(
       windowId,
       `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\" ${pluginDirFlag}"`,
