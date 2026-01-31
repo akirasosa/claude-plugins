@@ -27,6 +27,7 @@
       "entry": [
         "src/ensure-gtrconfig.ts",
         "src/mcp/server.ts",
+        "scripts/cli/*.ts",
         "scripts/hooks/*.ts",
         "**/*.test.ts"
       ],

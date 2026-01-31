@@ -62,49 +62,38 @@ mcp__plugin_tmux-worktree_worktree__create_orchestrator_session({})
 
 This returns an `orchestrator_id` (e.g., `orch_abc12345`). **Save this ID** for use with all worker sessions.
 
-### Step 2: Start Background Message Polling
+### Step 2: Start Background Message Watcher
 
-Start a background subagent to poll for worker messages. When a message arrives, the agent exits and notifies you.
+Start a background task to wait for worker messages. Uses `fs.watch()` for instant notification when a message arrives.
 
 ```
 Task({
-  subagent_type: "general-purpose",
-  description: "Poll worker messages",
+  subagent_type: "Bash",
+  description: "Wait for worker messages",
   run_in_background: true,
-  prompt: `You are a message polling agent for orchestrator ID: <ORCHESTRATOR_ID>
+  prompt: `Run: bun run ~/.claude/plugins/tmux-worktree/scripts/cli/wait-for-message.ts \
+    --orchestrator-id=<ORCHESTRATOR_ID> --timeout=600
 
-Your job is to poll for messages and EXIT when one arrives.
+When the command exits, report the message content. The output is JSON with this structure:
+- status: "messages" (got messages), "timeout" (no messages within timeout), or "error"
+- messages: array of messages if status is "messages"
+- error: error message if status is "error"
 
-## Instructions
-
-Loop:
-1. Call the poll_messages MCP tool:
-   mcp__plugin_tmux-worktree_worktree__poll_messages({ orchestrator_id: "<ORCHESTRATOR_ID>" })
-
-2. If message_count > 0:
-   - Output the message summary in this format:
-     📬 Worker notification received!
-     - Type: <message_type>
-     - Summary: <content.summary>
-     - PR URL: <content.pr_url> (if present)
-     - Branch: <content.branch> (if present)
-   - EXIT immediately (this notifies the orchestrator)
-
-3. If no messages, wait 30 seconds: sleep 30
-
-4. Repeat from step 1
-
-IMPORTANT: Exit as soon as you receive a message so the orchestrator can process it.
+Each message contains:
+- message_type: "task_complete", "task_failed", or "question"
+- content.summary: Brief description
+- content.pr_url: PR URL if present
+- content.branch: Branch name if present
 `
 })
 ```
 
-**CRITICAL: When the background agent exits**, immediately:
+**CRITICAL: When the background task exits**, immediately:
 1. Read the output file to see the message
 2. Process the message (review PR, answer question, etc.)
-3. **Restart the background polling agent immediately** (use the same Task command above)
+3. **Restart the background watcher immediately** (use the same Task command above)
 
-**Always keep polling running.** Restart it every time it exits.
+**Always keep the watcher running.** Restart it every time it exits.
 
 ## Phase 1: Task Delegation
 
