@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { createSpawnedWorker } from "../../db/index.js";
 import { getMcpServersFromProject, updateClaudeConfig } from "../utils/claude-config.js";
@@ -12,15 +12,6 @@ export interface StartWorktreeSessionArgs {
   planMode?: boolean;
   prompt?: string;
   orchestratorId?: string;
-}
-
-/**
- * Gets the plugin root directory (where plugin.json is located)
- * This file is at src/mcp/tools/start-worktree-session.ts
- * Plugin root is 3 levels up
- */
-function getPluginRoot(): string {
-  return dirname(dirname(dirname(import.meta.dir)));
 }
 
 /**
@@ -149,19 +140,13 @@ export async function startWorktreeSession(
 
   // Build claude command
   const planModeFlag = planMode ? "--permission-mode plan" : "";
-  // Pass plugin directory so hooks are available in worker sessions
-  const pluginDirFlag = `--plugin-dir ${getPluginRoot()}`;
 
   if (prompt) {
     // Use base64 encoding to safely transfer prompts with special characters
-    // IMPORTANT: Prompt must come BEFORE --plugin-dir flag for Claude to receive it
     const encoded = Buffer.from(prompt).toString("base64");
-    sendKeys(
-      windowId,
-      `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\" ${pluginDirFlag}"`,
-    );
+    sendKeys(windowId, `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`);
   } else {
-    sendKeys(windowId, `"claude ${planModeFlag} ${pluginDirFlag}"`);
+    sendKeys(windowId, `"claude ${planModeFlag}"`);
   }
 
   return {
