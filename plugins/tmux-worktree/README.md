@@ -59,6 +59,14 @@ You (human)
 
 The plugin creates `.claude/.orchestrator-id` in worktrees. Ensure your `.gitignore` includes `.claude/*` (with appropriate exceptions) to avoid committing this file.
 
+## Troubleshooting
+
+### Worktree not cleaned up
+Run `git gtr clean --merged -n` to check for orphaned worktrees that can be safely removed.
+
+### Tmux window still open
+The preRemove hook should handle this automatically. If a tmux window persists after worktree removal, check that the hook is properly configured.
+
 ## Uninstalling
 
 ```bash
