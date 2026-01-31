@@ -5,6 +5,7 @@ import "./styles/input.css";
 import "./components"; // Register Lit components
 import { getCleanupPreview, performCleanup } from "./api";
 import type { EventRow } from "./components/event-row";
+import { requestNotificationPermission, showBrowserNotification } from "./notifications";
 import { connectSSE, getCurrentMode, setCurrentMode, setOnEventsCallback } from "./sse";
 import { getReadStatus, initDb } from "./storage";
 import type { CleanupPreviewResponse, EventResponse, FilterMode } from "./types";
@@ -125,6 +126,9 @@ function hideCleanupModal(): void {
 // Initialize application
 
 async function init(): Promise<void> {
+  // Request notification permission early
+  requestNotificationPermission();
+
   // Initialize IndexedDB
   await initDb();
 
@@ -133,6 +137,9 @@ async function init(): Promise<void> {
 
   // Set up SSE events callback
   setOnEventsCallback((data) => {
+    for (const event of data.events) {
+      showBrowserNotification(event);
+    }
     renderEvents(data.events);
   });
 

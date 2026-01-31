@@ -1,6 +1,4 @@
-import { shouldNotify } from "./dedup";
 import { generateSummary } from "./gemini";
-import { showNotification } from "./platform-notify";
 
 export type EventType = "stop" | "notification" | "sessionstart" | "sessionend";
 
@@ -33,7 +31,6 @@ async function handleStop(
   logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   const transcriptPath = input.transcript_path || "";
-  const sessionId = input.session_id || "";
 
   const summary = await generateSummary(transcriptPath, "stop");
   const displaySummary = summary || "Task completed";
@@ -41,17 +38,12 @@ async function handleStop(
   // Always log to DB
   logToDb("Stop", displaySummary);
 
-  // Only show notification if not recently notified
-  let notificationShown = false;
-  if (shouldNotify(sessionId)) {
-    await showNotification("Claude Code", `[Stop] ${displaySummary}`);
-    notificationShown = true;
-  }
+  // Desktop notification removed - browser handles this via SSE
 
   return {
     eventType: "Stop",
     summary: displaySummary,
-    notificationShown,
+    notificationShown: false,
   };
 }
 
@@ -63,7 +55,6 @@ async function handleNotification(
   logToDb: (eventType: string, summary: string) => void,
 ): Promise<HandleEventResult> {
   const transcriptPath = input.transcript_path || "";
-  const sessionId = input.session_id || "";
   const notificationType = input.notification_type || "unknown";
 
   const summary = await generateSummary(transcriptPath, "notification");
@@ -76,17 +67,12 @@ async function handleNotification(
   // Always log to DB
   logToDb(eventType, displaySummary);
 
-  // Only show notification if not recently notified
-  let notificationShown = false;
-  if (shouldNotify(sessionId)) {
-    await showNotification("Claude Code", `[${notificationType}] ${displaySummary}`);
-    notificationShown = true;
-  }
+  // Desktop notification removed - browser handles this via SSE
 
   return {
     eventType,
     summary: displaySummary,
-    notificationShown,
+    notificationShown: false,
   };
 }
 

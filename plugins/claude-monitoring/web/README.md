@@ -5,6 +5,7 @@ A simple web interface for monitoring Claude Code sessions with real-time update
 ## Features
 
 - **Real-time updates**: Automatically refreshes when new events occur (via SSE)
+- **Browser notifications**: Native browser notifications for Stop and Notification events
 - **Read tracking**: Mark events as read (persisted in browser localStorage)
 - **Clipboard copy**: Click tmux commands to copy to clipboard
 - **Responsive design**: Works on desktop and mobile

@@ -1,16 +1,15 @@
 # Claude Monitoring Plugin
 
-Claude Code event monitoring plugin with desktop notifications and database logging.
+Claude Code event monitoring plugin with browser notifications and database logging.
 
 ## Overview
 
-This plugin tracks Claude Code events and provides desktop notifications when tasks complete or require input. All events are logged to a SQLite database for session tracking and querying.
+This plugin tracks Claude Code events and provides browser notifications via the Web UI when tasks complete or require input. All events are logged to a SQLite database for session tracking and querying.
 
 ## Prerequisites
 
 - **bun**: TypeScript runtime
 - **gcloud**: Gemini API authentication (optional - only for summaries)
-- **osascript** (macOS) or **notify-send** (Linux): Desktop notifications
 
 ## Installation
 
@@ -27,7 +26,7 @@ claude --plugin-dir /path/to/claude-monitoring
 ## What it does
 
 - **Event Logging**: Records all Claude Code events to SQLite database
-- **Desktop Notifications**: Alerts when tasks complete or require input
+- **Browser Notifications**: Alerts via Web UI when tasks complete or require input
 - **Session Tracking**: Monitor active sessions via Web UI
 - **Tmux Integration**: Quick jump to Claude Code sessions running in tmux
 - **Auto Cleanup**: Records older than 30 days are automatically deleted
