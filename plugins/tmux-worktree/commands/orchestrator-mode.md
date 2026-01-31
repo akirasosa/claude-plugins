@@ -7,6 +7,7 @@ allowed-tools:
   - mcp__plugin_tmux-worktree_worktree__create_orchestrator_session
   - mcp__plugin_tmux-worktree_worktree__poll_messages
   - mcp__plugin_tmux-worktree_worktree__get_orchestrator_status
+  - mcp__plugin_tmux-worktree_worktree__wait_for_messages
 ---
 
 # Orchestrator Mode
@@ -68,13 +69,17 @@ Start a background task to wait for worker messages. Uses `fs.watch()` for insta
 
 ```
 Task({
-  subagent_type: "Bash",
+  subagent_type: "general-purpose",
   description: "Wait for worker messages",
   run_in_background: true,
-  prompt: `Run: bun run ~/.claude/plugins/tmux-worktree/scripts/cli/wait-for-message.ts \
-    --orchestrator-id=<ORCHESTRATOR_ID> --timeout=600
+  prompt: `Call the MCP tool to wait for messages:
 
-When the command exits, report the message content. The output is JSON with this structure:
+mcp__plugin_tmux-worktree_worktree__wait_for_messages({
+  orchestrator_id: "<ORCHESTRATOR_ID>",
+  timeout_seconds: 600
+})
+
+When the tool returns, report the result. The output is JSON with this structure:
 - status: "messages" (got messages), "timeout" (no messages within timeout), or "error"
 - messages: array of messages if status is "messages"
 - error: error message if status is "error"
@@ -215,7 +220,8 @@ This automatically cleans up the tmux window via the preRemove hook.
 | Action | Tool/Command |
 |--------|--------------|
 | Create orchestrator session | `mcp__plugin_tmux-worktree_worktree__create_orchestrator_session` |
-| Poll messages | `mcp__plugin_tmux-worktree_worktree__poll_messages` |
+| Wait for messages (blocking) | `mcp__plugin_tmux-worktree_worktree__wait_for_messages` |
+| Poll messages (instant) | `mcp__plugin_tmux-worktree_worktree__poll_messages` |
 | Check status | `mcp__plugin_tmux-worktree_worktree__get_orchestrator_status` |
 | Create worktree | `mcp__plugin_tmux-worktree_worktree__start_worktree_session` |
 | List PRs | `gh pr list` |
