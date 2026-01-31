@@ -24,6 +24,21 @@ claude plugin install tmux-worktree
 | [claude-monitoring](./plugins/claude-monitoring/) | Event monitoring with desktop notifications and DB logging | - |
 | [tmux-worktree](./plugins/tmux-worktree/) | Git worktree workflow with tmux integration | tmux, [git-worktree-runner](https://github.com/coderabbitai/git-worktree-runner) |
 
+## Testing
+
+Run tests for individual plugins:
+
+```bash
+# claude-monitoring plugin
+cd plugins/claude-monitoring && bun test              # Run all tests
+cd plugins/claude-monitoring && bun test --watch      # Watch mode
+
+# claude-monitoring web
+cd plugins/claude-monitoring/web && bun test          # Run all tests
+cd plugins/claude-monitoring/web && bun test --watch  # Watch mode
+cd plugins/claude-monitoring/web && bun test --coverage  # With coverage
+```
+
 ## Web UI (Optional)
 
 ```bash

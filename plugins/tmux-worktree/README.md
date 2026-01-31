@@ -64,3 +64,18 @@ The plugin creates `.claude/.orchestrator-id` in worktrees. Ensure your `.gitign
 ```bash
 claude plugin uninstall tmux-worktree
 ```
+
+## Testing
+
+Run tests from the plugin directory:
+
+```bash
+cd plugins/tmux-worktree
+bun test
+```
+
+Watch mode for development:
+
+```bash
+bun test --watch
+```
