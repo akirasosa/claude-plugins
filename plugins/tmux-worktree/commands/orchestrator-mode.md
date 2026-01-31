@@ -4,6 +4,9 @@ allowed-tools:
   - Bash
   - Task
   - mcp__plugin_tmux-worktree_worktree__start_worktree_session
+  - mcp__plugin_tmux-worktree_worktree__create_orchestrator_session
+  - mcp__plugin_tmux-worktree_worktree__poll_messages
+  - mcp__plugin_tmux-worktree_worktree__get_orchestrator_status
 ---
 
 # Orchestrator Mode
@@ -14,15 +17,17 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate ALL tasks—im
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Orchestrator Mode (this session)                                │
+│  Orchestrator Mode (this session)                           │
 │                                                             │
-│  1. Discuss task with user → Create worktree               │
-│  2. Wait for worker to complete PR                          │
-│  3. Review PR → Merge → Update main → Cleanup               │
-│  4. Repeat                                                  │
+│  1. Create orchestrator session (get ID)                    │
+│  2. Start background message polling                        │
+│  3. Discuss task with user → Create worktree (with ID)      │
+│  4. Receive AUTOMATIC notification when worker completes    │
+│  5. Review PR → Merge → Update main → Cleanup               │
+│  6. Repeat                                                  │
 └─────────────────────────────────────────────────────────────┘
          │                          ▲
-         │ delegate                 │ PR ready
+         │ delegate                 │ AUTOMATIC (via hooks)
          ▼                          │
 ┌─────────────────────────────────────────────────────────────┐
 │  Worker Session (separate tmux window)                      │
@@ -30,8 +35,65 @@ You are now in **Orchestrator Mode**. Your role is to orchestrate ALL tasks—im
 │  - Runs in plan mode                                        │
 │  - Executes the task (implementation, research, etc.)       │
 │  - Creates pull request                                     │
+│  - PostToolUse hook detects `gh pr create` → auto-notifies  │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## How Automatic Notifications Work
+
+When you pass `orchestratorId` to `start_worktree_session`, the system automatically:
+
+1. **Records the worker** in a tracking database
+2. **Creates `.claude/.orchestrator-id`** file in the worktree
+3. **Configures hooks** via the plugin:
+   - **PostToolUse hook**: Detects `gh pr create` commands and sends completion notification
+
+This means **workers don't need to manually call `send_message`**—notifications happen automatically!
+
+## Phase 0: Initialize Orchestrator Session
+
+**CRITICAL: Do this FIRST before delegating any tasks.**
+
+### Step 1: Create Orchestrator Session
+
+```
+mcp__plugin_tmux-worktree_worktree__create_orchestrator_session({})
+```
+
+This returns an `orchestrator_id` (e.g., `orch_abc12345`). **Save this ID** for use with all worker sessions.
+
+### Step 2: Start Background Message Watcher
+
+Start a background task to wait for worker messages. Uses `fs.watch()` for instant notification when a message arrives.
+
+```
+Task({
+  subagent_type: "Bash",
+  description: "Wait for worker messages",
+  run_in_background: true,
+  prompt: `Run: bun run ~/.claude/plugins/tmux-worktree/scripts/cli/wait-for-message.ts \
+    --orchestrator-id=<ORCHESTRATOR_ID> --timeout=600
+
+When the command exits, report the message content. The output is JSON with this structure:
+- status: "messages" (got messages), "timeout" (no messages within timeout), or "error"
+- messages: array of messages if status is "messages"
+- error: error message if status is "error"
+
+Each message contains:
+- message_type: "task_complete", "task_failed", or "question"
+- content.summary: Brief description
+- content.pr_url: PR URL if present
+- content.branch: Branch name if present
+`
+})
+```
+
+**CRITICAL: When the background task exits**, immediately:
+1. Read the output file to see the message
+2. Process the message (review PR, answer question, etc.)
+3. **Restart the background watcher immediately** (use the same Task command above)
+
+**Always keep the watcher running.** Restart it every time it exits.
 
 ## Phase 1: Task Delegation
 
@@ -68,22 +130,19 @@ Use the `mcp__plugin_tmux-worktree_worktree__start_worktree_session` tool:
 | planMode | true for plan mode (default: false) |
 | prompt | Initial prompt for Claude Code |
 | fromRef | Base branch to create from |
+| orchestratorId | **Required** - The orchestrator session ID for auto-notifications |
+
+**IMPORTANT**: Always pass `orchestratorId` so automatic notifications are enabled.
 
 **Examples:**
 
 ```
-# Implementation task
+# Standard task (will auto-notify when PR is created)
 mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-auth",
   planMode: true,
+  orchestratorId: "orch_abc12345",
   prompt: "Objective: Add user authentication..."
-})
-
-# Research task
-mcp__plugin_tmux-worktree_worktree__start_worktree_session({
-  branch: "research/skill-visibility",
-  planMode: true,
-  prompt: "Objective: Research why plugin skills don't appear in slash commands..."
 })
 
 # From a specific base branch
@@ -91,15 +150,17 @@ mcp__plugin_tmux-worktree_worktree__start_worktree_session({
   branch: "feat/add-metrics",
   fromRef: "develop",
   planMode: true,
+  orchestratorId: "orch_abc12345",
   prompt: "Objective: Add metrics collection..."
 })
 ```
 
 This creates a worktree, opens a new tmux window, and starts Claude Code.
+**Automatic notification hooks are configured**—when the worker runs `gh pr create`, you'll be notified automatically.
 
 ## Phase 2: PR Review and Merge
 
-When the user returns saying a PR is ready:
+When notified that a PR is ready:
 
 1. **List open PRs**
    ```bash
@@ -117,13 +178,18 @@ When the user returns saying a PR is ready:
    - Verify the objective was met
    - Look for obvious issues
 
-4. **Merge if acceptable**
+4. **Report findings and ASK the user**
+   - Summarize the PR changes to the user
+   - **ALWAYS ask the user for confirmation before merging**
+   - Do NOT merge automatically—wait for explicit user approval
+
+5. **Merge only after user approval**
    ```bash
    gh pr merge <number> --squash
    ```
    Note: Do NOT use `--delete-branch` here. The worktree still references the branch.
 
-5. **Update main branch**
+6. **Update main branch**
    ```bash
    git fetch origin && git pull origin main
    ```
@@ -148,6 +214,9 @@ This automatically cleans up the tmux window via the preRemove hook.
 
 | Action | Tool/Command |
 |--------|--------------|
+| Create orchestrator session | `mcp__plugin_tmux-worktree_worktree__create_orchestrator_session` |
+| Poll messages | `mcp__plugin_tmux-worktree_worktree__poll_messages` |
+| Check status | `mcp__plugin_tmux-worktree_worktree__get_orchestrator_status` |
 | Create worktree | `mcp__plugin_tmux-worktree_worktree__start_worktree_session` |
 | List PRs | `gh pr list` |
 | View PR | `gh pr view <number>` |
@@ -158,9 +227,13 @@ This automatically cleans up the tmux window via the preRemove hook.
 
 ## Important Notes
 
+- **Always keep polling running**: Restart the polling agent immediately every time it exits
+- **Initialize first**: Always call `create_orchestrator_session` and start polling before delegating
+- **Always pass `orchestratorId`**: This enables automatic notification hooks
+- **Automatic PR detection**: When a worker runs `gh pr create`, the orchestrator is notified automatically
 - Always use `planMode: true` when starting worker sessions
 - Workers should create PRs, not push directly to main
-- Review PRs before merging, even if briefly
+- Review PRs and ask user before merging
 - Clean up worktrees after merging to avoid clutter
 - The orchestrator session stays on the main branch
 - **Delegate research tasks too**—don't execute WebSearch or exploration yourself

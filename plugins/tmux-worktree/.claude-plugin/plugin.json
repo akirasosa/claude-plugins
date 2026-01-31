@@ -1,6 +1,6 @@
 {
   "name": "tmux-worktree",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "description": "Git worktree workflow with tmux integration for parallel Claude Code sessions",
   "hooks": {
     "SessionStart": [
@@ -9,6 +9,17 @@
           {
             "type": "command",
             "command": "bun run ${CLAUDE_PLUGIN_ROOT}/src/ensure-gtrconfig.ts"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun run ${CLAUDE_PLUGIN_ROOT}/scripts/hooks/detect-pr-completion.ts"
           }
         ]
       }

@@ -1,4 +1,7 @@
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { createSpawnedWorker } from "../../db/index.js";
 import { getMcpServersFromProject, updateClaudeConfig } from "../utils/claude-config.js";
 import { exec, execOrThrow } from "../utils/exec.js";
 import { createWindow, isTmuxAvailable, sendKeys, waitForShellInit } from "../utils/tmux.js";
@@ -8,6 +11,20 @@ export interface StartWorktreeSessionArgs {
   fromRef?: string;
   planMode?: boolean;
   prompt?: string;
+  orchestratorId?: string;
+}
+
+/**
+ * Writes orchestrator ID file to worktree's .claude directory
+ * This file is read by hooks (defined in plugin.json) to determine if
+ * this session is a worker spawned by an orchestrator.
+ */
+function writeOrchestratorIdFile(worktreePath: string, orchestratorId: string): void {
+  const claudeDir = join(worktreePath, ".claude");
+  if (!existsSync(claudeDir)) {
+    mkdirSync(claudeDir, { recursive: true });
+  }
+  writeFileSync(join(claudeDir, ".orchestrator-id"), orchestratorId);
 }
 
 /**
@@ -16,7 +33,7 @@ export interface StartWorktreeSessionArgs {
 export async function startWorktreeSession(
   args: StartWorktreeSessionArgs,
 ): Promise<CallToolResult> {
-  const { branch, fromRef, planMode, prompt } = args;
+  const { branch, fromRef, planMode, prompt, orchestratorId } = args;
 
   // Validate branch parameter
   if (!branch || typeof branch !== "string") {
@@ -81,6 +98,24 @@ export async function startWorktreeSession(
   // Update ~/.claude.json to trust the worktree and enable MCP servers
   updateClaudeConfig(worktreePath, mcpServers);
 
+  // If orchestratorId is provided, set up worker tracking
+  if (orchestratorId) {
+    // 1. Record spawned worker in database
+    try {
+      createSpawnedWorker({
+        orchestrator_id: orchestratorId,
+        branch,
+        worktree_path: worktreePath,
+      });
+    } catch (e) {
+      // Log but don't fail - DB might not be initialized
+      console.error("Failed to record spawned worker:", e);
+    }
+
+    // 2. Write orchestrator ID file (hooks read this to send notifications)
+    writeOrchestratorIdFile(worktreePath, orchestratorId);
+  }
+
   // Window name (remove branch prefix like feat/, fix/, etc.)
   const windowName = branch.includes("/") ? branch.split("/").pop() || branch : branch;
 
@@ -107,8 +142,7 @@ export async function startWorktreeSession(
   const planModeFlag = planMode ? "--permission-mode plan" : "";
 
   if (prompt) {
-    // Use base64 encoding to safely transfer prompts with newlines or special characters
-    // macOS base64 adds line breaks every 76 chars, so remove them with tr -d '\n'
+    // Use base64 encoding to safely transfer prompts with special characters
     const encoded = Buffer.from(prompt).toString("base64");
     sendKeys(windowId, `"claude ${planModeFlag} \\"\\$(echo '${encoded}' | base64 -d)\\""`);
   } else {

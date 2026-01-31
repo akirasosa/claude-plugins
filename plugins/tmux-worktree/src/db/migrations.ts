@@ -1,0 +1,150 @@
+import { Database } from "bun:sqlite";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { DB_FILE } from "./config";
+import { dbExists, ensureDbDir } from "./database";
+
+function getMigrationsDir(): string {
+  // When compiled, process.execPath gives the actual binary path
+  // When running from source, import.meta.dir works
+  const isCompiled = import.meta.path.startsWith("/$bunfs/");
+
+  if (isCompiled) {
+    const binDir = dirname(process.execPath);
+    return join(dirname(binDir), "scripts", "migrations");
+  }
+
+  // Running from source (src/db/migrations.ts -> scripts/migrations)
+  return join(dirname(dirname(import.meta.dir)), "scripts", "migrations");
+}
+
+function getDbVersion(db: Database): number {
+  try {
+    const result = db.query("PRAGMA user_version").get() as {
+      user_version: number;
+    };
+    return result.user_version;
+  } catch {
+    return 0;
+  }
+}
+
+function setDbVersion(db: Database, version: number): void {
+  db.exec(`PRAGMA user_version = ${version}`);
+}
+
+function tableExists(db: Database, tableName: string): boolean {
+  const result = db
+    .query("SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name=?")
+    .get(tableName) as { count: number };
+  return result.count > 0;
+}
+
+function detectExistingVersion(db: Database): number {
+  if (!tableExists(db, "orchestrator_sessions")) {
+    return 0;
+  }
+  // Check for migration 002: spawned_workers table
+  if (tableExists(db, "spawned_workers")) {
+    return 2;
+  }
+  return 1;
+}
+
+function getMigrationVersion(filename: string): number {
+  const match = filename.match(/^(\d+)_/);
+  return match ? Number.parseInt(match[1], 10) : 0;
+}
+
+function getMigrationFiles(): string[] {
+  const dir = getMigrationsDir();
+  if (!existsSync(dir)) {
+    return [];
+  }
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+}
+
+export interface MigrateResult {
+  applied: number;
+  pending: string[];
+  currentVersion: number;
+  newVersion: number;
+}
+
+export function migrate(checkOnly = false): MigrateResult {
+  ensureDbDir();
+  const db = new Database(DB_FILE);
+
+  try {
+    let currentVersion = getDbVersion(db);
+
+    // Handle legacy databases (user_version=0 but tables exist)
+    if (currentVersion === 0 && dbExists()) {
+      const detected = detectExistingVersion(db);
+      if (detected > 0) {
+        console.log(`Detected existing database at version ${detected} (setting user_version)`);
+        setDbVersion(db, detected);
+        currentVersion = detected;
+      }
+    }
+
+    console.log(`Current database version: ${currentVersion}`);
+
+    const migrations = getMigrationFiles();
+    if (migrations.length === 0) {
+      console.log(`No migrations found in ${getMigrationsDir()}`);
+      return {
+        applied: 0,
+        pending: [],
+        currentVersion,
+        newVersion: currentVersion,
+      };
+    }
+
+    const pending: string[] = [];
+    let applied = 0;
+    let newVersion = currentVersion;
+
+    for (const file of migrations) {
+      const version = getMigrationVersion(file);
+      if (version > currentVersion) {
+        pending.push(file);
+        if (!checkOnly) {
+          console.log(`Applying migration ${version}: ${file}`);
+          const sql = readFileSync(join(getMigrationsDir(), file), "utf-8");
+
+          db.exec("BEGIN TRANSACTION");
+          try {
+            db.exec(sql);
+            setDbVersion(db, version);
+            db.exec("COMMIT");
+            applied++;
+            newVersion = version;
+          } catch (err) {
+            db.exec("ROLLBACK");
+            throw err;
+          }
+        }
+      }
+    }
+
+    if (pending.length === 0) {
+      console.log("Database is up to date");
+    } else if (checkOnly) {
+      console.log(`${pending.length} migration(s) pending`);
+      for (const p of pending) {
+        console.log(`Pending: ${p}`);
+      }
+    } else {
+      console.log(`Applied ${applied} migration(s)`);
+    }
+
+    console.log(`Database version: ${newVersion}`);
+
+    return { applied, pending, currentVersion, newVersion };
+  } finally {
+    db.close();
+  }
+}
