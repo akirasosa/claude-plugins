@@ -17,7 +17,6 @@ import {
   type StartWorktreeSessionArgs,
   startWorktreeSession,
 } from "./tools/start-worktree-session.js";
-import { type WaitForMessagesArgs, waitForMessages } from "./tools/wait-for-messages.js";
 
 const TOOL_DEFINITIONS = [
   {
@@ -133,28 +132,9 @@ const TOOL_DEFINITIONS = [
       required: ["orchestrator_id"],
     },
   },
-  {
-    name: "wait_for_messages",
-    description:
-      "Waits for worker messages to arrive. Blocks until messages received or timeout. Uses fs.watch() for instant notification.",
-    inputSchema: {
-      type: "object" as const,
-      properties: {
-        orchestrator_id: {
-          type: "string",
-          description: "The orchestrator session ID to wait for messages",
-        },
-        timeout_seconds: {
-          type: "number",
-          description: "Timeout in seconds (default: 300, max: 600)",
-        },
-      },
-      required: ["orchestrator_id"],
-    },
-  },
 ];
 
-const server = new Server({ name: "worktree", version: "3.3.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "worktree", version: "3.2.0" }, { capabilities: { tools: {} } });
 
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: TOOL_DEFINITIONS,
@@ -174,8 +154,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request): Promise<CallToo
       return pollMessages(args as unknown as PollMessagesArgs);
     case "get_orchestrator_status":
       return getOrchestratorStatus(args as unknown as GetOrchestratorStatusArgs);
-    case "wait_for_messages":
-      return waitForMessages(args as unknown as WaitForMessagesArgs);
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
