@@ -100,21 +100,3 @@ export function connectSSE(): void {
     }, RECONNECT_TIMEOUT_MS);
   };
 }
-
-/**
- * Disconnect SSE and stop polling
- */
-export function disconnectSSE(): void {
-  if (eventSource) {
-    eventSource.close();
-    eventSource = null;
-  }
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer);
-    reconnectTimer = null;
-  }
-}

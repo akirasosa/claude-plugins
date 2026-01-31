@@ -13,6 +13,9 @@ export function requestNotificationPermission(): void {
 }
 
 export function showBrowserNotification(event: EventResponse): void {
+  // Check browser support for Notification API
+  if (!("Notification" in window)) return;
+
   // Only notify for Stop and Notification events
   if (!event.event_type.startsWith("Stop") && !event.event_type.startsWith("Notification")) {
     return;

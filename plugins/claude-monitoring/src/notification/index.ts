@@ -7,19 +7,7 @@ export interface NotificationInput {
   cwd?: string;
   transcript_path?: string;
   reason?: string;
-  // Notification-specific fields (from Claude Code hooks)
-  notification_type?: string; // permission_prompt, idle_prompt, auth_success, elicitation_dialog
-  message?: string;
-  // Stop-specific fields
-  stop_hook_active?: boolean;
-  // Common hook fields
-  hook_event_name?: string;
-  permission_mode?: string;
-}
-
-export interface HandleEventResult {
-  eventType: string;
-  summary: string;
+  notification_type?: string;
 }
 
 /**
@@ -28,18 +16,13 @@ export interface HandleEventResult {
 async function handleStop(
   input: NotificationInput,
   logToDb: (eventType: string, summary: string) => void,
-): Promise<HandleEventResult> {
+): Promise<void> {
   const transcriptPath = input.transcript_path || "";
 
   const summary = await generateSummary(transcriptPath, "stop");
   const displaySummary = summary || "Task completed";
 
   logToDb("Stop", displaySummary);
-
-  return {
-    eventType: "Stop",
-    summary: displaySummary,
-  };
 }
 
 /**
@@ -48,7 +31,7 @@ async function handleStop(
 async function handleNotification(
   input: NotificationInput,
   logToDb: (eventType: string, summary: string) => void,
-): Promise<HandleEventResult> {
+): Promise<void> {
   const transcriptPath = input.transcript_path || "";
   const notificationType = input.notification_type || "unknown";
 
@@ -60,11 +43,6 @@ async function handleNotification(
   const eventType = `Notification:${notificationType}`;
 
   logToDb(eventType, displaySummary);
-
-  return {
-    eventType,
-    summary: displaySummary,
-  };
 }
 
 /**
@@ -73,13 +51,8 @@ async function handleNotification(
 async function handleSessionStart(
   _input: NotificationInput,
   logToDb: (eventType: string, summary: string) => void,
-): Promise<HandleEventResult> {
+): Promise<void> {
   logToDb("SessionStart", "Session started");
-
-  return {
-    eventType: "SessionStart",
-    summary: "Session started",
-  };
 }
 
 /**
@@ -88,16 +61,11 @@ async function handleSessionStart(
 async function handleSessionEnd(
   input: NotificationInput,
   logToDb: (eventType: string, summary: string) => void,
-): Promise<HandleEventResult> {
+): Promise<void> {
   const reason = input.reason || "unknown";
   const summary = `reason=${reason}`;
 
   logToDb("SessionEnd", summary);
-
-  return {
-    eventType: "SessionEnd",
-    summary,
-  };
 }
 
 /**
@@ -107,7 +75,7 @@ export async function handleEvent(
   eventType: EventType,
   input: NotificationInput,
   logToDb: (eventType: string, summary: string) => void,
-): Promise<HandleEventResult> {
+): Promise<void> {
   switch (eventType) {
     case "stop":
       return handleStop(input, logToDb);
@@ -120,9 +88,5 @@ export async function handleEvent(
     default:
       // Unknown event type, log as-is
       logToDb(eventType, "Unknown event");
-      return {
-        eventType,
-        summary: "Unknown event",
-      };
   }
 }
