@@ -62,24 +62,22 @@ mcp__plugin_tmux-worktree_worktree__create_orchestrator_session({})
 
 This returns an `orchestrator_id` (e.g., `orch_abc12345`). **Save this ID** for use with all worker sessions.
 
-### Step 2: Start Background Message Watcher
+### Step 2: Start Background Message Polling
 
-Start a background task to wait for worker messages. Uses `fs.watch()` for instant notification when a message arrives.
+Start a background task to poll for worker messages every 30 seconds.
 
 ```
 Task({
-  subagent_type: "Bash",
-  description: "Wait for worker messages",
+  subagent_type: "general-purpose",
+  description: "Poll for worker messages",
   run_in_background: true,
-  prompt: `Run: bun run ~/.claude/plugins/tmux-worktree/scripts/cli/wait-for-message.ts \
-    --orchestrator-id=<ORCHESTRATOR_ID> --timeout=600
+  prompt: `Poll for messages from workers every 30 seconds using:
 
-When the command exits, report the message content. The output is JSON with this structure:
-- status: "messages" (got messages), "timeout" (no messages within timeout), or "error"
-- messages: array of messages if status is "messages"
-- error: error message if status is "error"
+mcp__plugin_tmux-worktree_worktree__poll_messages({
+  orchestrator_id: "<ORCHESTRATOR_ID>"
+})
 
-Each message contains:
+Keep polling until you receive a message. When you get messages, report:
 - message_type: "task_complete", "task_failed", or "question"
 - content.summary: Brief description
 - content.pr_url: PR URL if present
@@ -88,12 +86,11 @@ Each message contains:
 })
 ```
 
-**CRITICAL: When the background task exits**, immediately:
-1. Read the output file to see the message
-2. Process the message (review PR, answer question, etc.)
-3. **Restart the background watcher immediately** (use the same Task command above)
+**CRITICAL: When the background task returns with a message**, immediately:
+1. Process the message (review PR, answer question, etc.)
+2. **Restart the background poller immediately** (use the same Task command above)
 
-**Always keep the watcher running.** Restart it every time it exits.
+**Always keep the poller running.** Restart it every time it exits.
 
 ## Phase 1: Task Delegation
 
