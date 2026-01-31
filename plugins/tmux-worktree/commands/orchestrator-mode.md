@@ -7,7 +7,6 @@ allowed-tools:
   - mcp__plugin_tmux-worktree_worktree__create_orchestrator_session
   - mcp__plugin_tmux-worktree_worktree__poll_messages
   - mcp__plugin_tmux-worktree_worktree__get_orchestrator_status
-  - mcp__plugin_tmux-worktree_worktree__wait_for_messages
 ---
 
 # Orchestrator Mode
