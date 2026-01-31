@@ -20,11 +20,10 @@ export interface NotificationInput {
 export interface HandleEventResult {
   eventType: string;
   summary: string;
-  notificationShown: boolean;
 }
 
 /**
- * Handle a stop event: generate summary, log to DB, and show notification
+ * Handle a stop event: generate summary and log to DB
  */
 async function handleStop(
   input: NotificationInput,
@@ -35,20 +34,16 @@ async function handleStop(
   const summary = await generateSummary(transcriptPath, "stop");
   const displaySummary = summary || "Task completed";
 
-  // Always log to DB
   logToDb("Stop", displaySummary);
-
-  // Desktop notification removed - browser handles this via SSE
 
   return {
     eventType: "Stop",
     summary: displaySummary,
-    notificationShown: false,
   };
 }
 
 /**
- * Handle a notification event: generate summary, log to DB, and show notification
+ * Handle a notification event: generate summary and log to DB
  */
 async function handleNotification(
   input: NotificationInput,
@@ -64,15 +59,11 @@ async function handleNotification(
   // notification_type can be: idle_prompt, permission_prompt, elicitation_dialog, auth_success
   const eventType = `Notification:${notificationType}`;
 
-  // Always log to DB
   logToDb(eventType, displaySummary);
-
-  // Desktop notification removed - browser handles this via SSE
 
   return {
     eventType,
     summary: displaySummary,
-    notificationShown: false,
   };
 }
 
@@ -88,7 +79,6 @@ async function handleSessionStart(
   return {
     eventType: "SessionStart",
     summary: "Session started",
-    notificationShown: false,
   };
 }
 
@@ -107,7 +97,6 @@ async function handleSessionEnd(
   return {
     eventType: "SessionEnd",
     summary,
-    notificationShown: false,
   };
 }
 
@@ -134,7 +123,6 @@ export async function handleEvent(
       return {
         eventType,
         summary: "Unknown event",
-        notificationShown: false,
       };
   }
 }
